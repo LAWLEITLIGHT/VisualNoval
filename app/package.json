@@ -7,7 +7,8 @@
     "build": "node scripts/build.js",
     "build:loader": "node scripts/build-loader.js",
     "verify": "node scripts/verify.js",
-    "gate": "npm run build && npm run build:loader && npm run verify"
+    "gate": "npm run build && npm run build:loader && npm run build:ext && npm run verify",
+    "build:ext": "node scripts/build-extension.js"
   },
   "license": "MIT"
 }

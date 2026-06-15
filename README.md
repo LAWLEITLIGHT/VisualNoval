@@ -50,11 +50,29 @@ npm run gate           # build + build:loader + verify 一条龙
 
 ## 安装（用户侧）
 
-两种方式：
+本仓库提供**三种**安装形态，按需选其一：
 
-1. **自动更新（推荐）**：在酒馆助手「脚本」里导入
-   `loader/酒馆助手脚本-Visual Novel liquidglass（自动更新）.json`，启用后会自动拉取并安装最新正则。
-2. **手动**：直接把 `app/dist/vn_visual_novel_liquidglass.json` 作为普通正则导入 SillyTavern。
+### 形态 C — SillyTavern 扩展（脱离正则，可用 Git URL 一键安装）⭐ 新
+
+不依赖 AI 输出里的 `<content>…</content>`。安装后扩展菜单出现 **Visual Novel** 入口，点击即把最近一条 AI 消息渲染成视觉小说：消息里有 `<content>` 就取其中内容，没有就取整条消息文本。
+
+安装：SillyTavern → 扩展(Extensions) → **Install extension** → 输入 Git URL：
+
+```
+https://github.com/LAWLEITLIGHT/VisualNoval
+```
+
+分支留空(默认 main)即可，选「只给我安装」或「给所有人安装」。仓库根的 `manifest.json` 会被识别为第三方扩展。
+
+> 说明：扩展版复用了正则版的阅读器主逻辑；图片绑定(st-chatu8 / chami 等逐图位功能)依赖每条消息的 iframe 环境，扩展全局模式下可能降级，但**正文→视觉小说**的核心转换不受影响。
+
+### 形态 A — 酒馆助手脚本（自动更新）
+
+在酒馆助手「脚本」里导入 `loader/酒馆助手脚本-Visual Novel liquidglass（自动更新）.json`，启用后会自动拉取并安装最新正则。
+
+### 形态 B — 手动正则
+
+直接把 `app/dist/vn_visual_novel_liquidglass.json` 作为普通正则导入 SillyTavern（无自动更新）。
 
 ## 修改流程
 
