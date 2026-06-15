@@ -32,13 +32,24 @@ if (body.indexOf(embTag) === -1) throw new Error('build-extension: 未找到内�
 body = body.replace(embTag, embToken);
 
 const bootstrap = fs.readFileSync(path.join(EXT, '_bootstrap.js'), 'utf8');
+// 读取要默认预装的 VNM 插件 app（app/src/apps/*.json）
+const APPS_DIR = path.join(SRC, 'apps');
+let apps = [];
+if (fs.existsSync(APPS_DIR)) {
+  apps = fs.readdirSync(APPS_DIR).filter(function (f) { return /\.json$/i.test(f); }).map(function (f) {
+    return JSON.parse(fs.readFileSync(path.join(APPS_DIR, f), 'utf8'));
+  }).filter(function (a) { return a && a.vnmPlugin && a.id && a.name; });
+}
 const header =
   '/* Visual Novel (liquid glass) — SillyTavern 扩展(iframe 注入式) v' + pkg.version + '\n' +
   ' * 自动生成: app/scripts/build-extension.js (勿手改; 源在 app/src/* 与 extension/_bootstrap.js)\n' +
   ' */\n';
 
 fs.mkdirSync(EXT, { recursive: true });
-const indexJs = header + ';window.__VNM_APP_HTML__ = ' + JSON.stringify(body) + ';\n' + bootstrap;
+const indexJs = header +
+  ';window.__VNM_APP_HTML__ = ' + JSON.stringify(body) + ';\n' +
+  ';window.__VNM_APPS__ = ' + JSON.stringify(apps) + ';\n' +
+  bootstrap;
 fs.writeFileSync(path.join(EXT, 'index.js'), indexJs);
 fs.writeFileSync(path.join(EXT, 'style.css'), fs.readFileSync(path.join(SRC, 'launcher.css'), 'utf8'));
 
@@ -54,4 +65,5 @@ const manifest = {
   auto_update: true,
 };
 fs.writeFileSync(path.join(ROOT, 'manifest.json'), JSON.stringify(manifest, null, 2));
+console.log('[build-extension] 预装 app:', apps.map(function(a){return a.name;}).join(',') || '(无)');
 console.log('[build-extension] index.js', indexJs.length, 'chars; APP_HTML', body.length, 'chars; v' + pkg.version);

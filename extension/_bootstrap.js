@@ -171,7 +171,39 @@
     else { var f = document.getElementById(FAB_ID); if (f) f.remove(); }
   }
 
+
+  // ---- 默认预装功能 app: 把打包的 VNM 插件种进 VN 存储(localStorage['vnm-statusbar-v2'].vnmApps) ----
+  function seedApps() {
+    var apps = window.__VNM_APPS__ || [];
+    if (!apps.length) return;
+    var KEY = 'vnm-statusbar-v2';
+    var sbS = {};
+    try { sbS = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { sbS = {}; }
+    if (!Array.isArray(sbS.vnmApps)) sbS.vnmApps = [];
+    var changed = false;
+    apps.forEach(function (p) {
+      if (!p || !p.id || !p.name) return;
+      var has = sbS.vnmApps.some(function (a) { return a && a.id === p.id; });
+      if (has) return; // 已存在则不动, 保留用户设置
+      sbS.vnmApps.push({
+        id: p.id, name: p.name, version: p.version || '1.0', description: p.description || '',
+        icon: p.icon || '<circle cx="12" cy="12" r="5"/>', enabled: true,
+        settingsTitle: p.settingsTitle || p.name, settingsFields: p.settingsFields || [],
+        settingsValues: {}, pageCode: p.pageCode || '', injectCode: p.injectCode || '',
+        injectEnabled: !!p.injectEnabled
+      });
+      changed = true;
+    });
+    if (changed) {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(sbS));
+        console.info(LOG, '已预装功能 app:', sbS.vnmApps.map(function (a) { return a.name; }).join('、'));
+      } catch (e) { console.error(LOG, '预装写入失败(可能超出存储配额):', e); }
+    }
+  }
+
   function boot() {
+    try { seedApps(); } catch (e) { console.error(LOG, 'seedApps 失败', e); }
     var tries = 0;
     var t = setInterval(function () {
       tries++;
@@ -182,7 +214,7 @@
     var fabPref = true;
     try { fabPref = localStorage.getItem('vnm-ext-fab') !== '0'; } catch (e) {}
     if (fabPref) ensureFab();
-    window.VNM_Extension = { open: openVN, ensureMenuEntry: ensureMenuEntry, ensureSettingsPanel: ensureSettingsPanel };
+    window.VNM_Extension = { open: openVN, seedApps: seedApps, ensureMenuEntry: ensureMenuEntry, ensureSettingsPanel: ensureSettingsPanel };
     console.info(LOG, '就绪。控制台可用 VNM_Extension.open() 手动打开。');
   }
 
