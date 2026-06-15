@@ -1,0 +1,16 @@
+{
+  "id": "d392a0c5-d82b-43a7-b288-72f864be06ab",
+  "scriptName": "Visual Novel v9.25-by白桃",
+  "findRegex": "/<content[^>]*>([\\s\\S]*?)<\\/content>/gis",
+  "trimStrings": [],
+  "placement": [
+    2
+  ],
+  "disabled": false,
+  "markdownOnly": true,
+  "promptOnly": false,
+  "runOnEdit": true,
+  "substituteRegex": 0,
+  "minDepth": null,
+  "maxDepth": null
+}

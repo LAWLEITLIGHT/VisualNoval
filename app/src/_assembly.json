@@ -1,0 +1,12 @@
+{
+  "fence_prefix": "```\n",
+  "fence_suffix": "</body>\n```\n",
+  "seg0": "<body>\n",
+  "embedded_source_tag": "<script type=\"text/plain\" id=\"vnm-embedded-source\">$1</script>",
+  "between_src_and_style": "\n",
+  "style_open": "<style>",
+  "style_close": "</style>",
+  "script_open": "<script>",
+  "script_close": "</script>",
+  "tail_raw": "\n"
+}
