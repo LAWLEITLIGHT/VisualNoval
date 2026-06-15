@@ -31,11 +31,14 @@ app = app.replace(NEEDLE, PATCHED);
 // --- 补丁 2: 包成 IIFE 并暴露 openViewer ---
 // 注意: 不加 "use strict" —— 原 app.js 是非严格模式代码, 严格模式会导致整段抛错;
 // 并用 try/catch 包住, 即使主程序初始化失败, 后面的扩展引导(入口注入)仍能运行。
+// 关键: 在主程序体执行(可能抛错的 launcher 绑定)之前, 先利用函数声明提升暴露 openViewer。
+// 这样即使后续顶层代码因缺少 launcher DOM 抛错, 阅读器入口已经可用。
 const appIife =
   ';try {(function(){\n' +
+  'try { window.__VNM_openViewer = openViewer; window.__VNM_app_ready = true; } catch(__pre){ console.warn("[VNM-Ext] 提前暴露失败", __pre); }\n' +
   app +
-  '\ntry { window.__VNM_openViewer = openViewer; window.__VNM_app_ready = true; } catch(e){ console.error("[VNM-Ext] expose failed", e); }\n' +
-  '})();} catch(__vnmErr){ console.error("[VNM-Ext] app 初始化失败(入口仍可用):", __vnmErr); }\n';
+  '\ntry { window.__VNM_openViewer = openViewer; window.__VNM_app_ready = true; } catch(e){}\n' +
+  '})();} catch(__vnmErr){ console.error("[VNM-Ext] app 初始化中断(入口仍可用):", __vnmErr); }\n';
 
 const bootstrap = fs.readFileSync(path.join(EXT, '_bootstrap.js'), 'utf8');
 

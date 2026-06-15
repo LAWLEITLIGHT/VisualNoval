@@ -1,7 +1,8 @@
-/* Visual Novel (liquid glass) — SillyTavern 扩展打包产物 v1.0.3
+/* Visual Novel (liquid glass) — SillyTavern 扩展打包产物 v1.0.4
  * 自动生成: app/scripts/build-extension.js  (勿手改; 改源在 app/src/app.js 与 extension/_bootstrap.js)
  */
 ;try {(function(){
+try { window.__VNM_openViewer = openViewer; window.__VNM_app_ready = true; } catch(__pre){ console.warn("[VNM-Ext] 提前暴露失败", __pre); }
 
 
 console.log('[VNM v9.17] loaded');
@@ -4167,8 +4168,8 @@ window.addEventListener('storage', function(e){
 });
 
 
-try { window.__VNM_openViewer = openViewer; window.__VNM_app_ready = true; } catch(e){ console.error("[VNM-Ext] expose failed", e); }
-})();} catch(__vnmErr){ console.error("[VNM-Ext] app 初始化失败(入口仍可用):", __vnmErr); }
+try { window.__VNM_openViewer = openViewer; window.__VNM_app_ready = true; } catch(e){}
+})();} catch(__vnmErr){ console.error("[VNM-Ext] app 初始化中断(入口仍可用):", __vnmErr); }
 
 /* ============================================================================
  * Visual Novel (liquid glass) — SillyTavern 扩展引导
