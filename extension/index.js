@@ -1,4 +1,4 @@
-/* Visual Novel (liquid glass) — SillyTavern 扩展打包产物 v1.0.1
+/* Visual Novel (liquid glass) — SillyTavern 扩展打包产物 v1.0.2
  * 自动生成: app/scripts/build-extension.js  (勿手改; 改源在 app/src/app.js 与 extension/_bootstrap.js)
  */
 ;(function(){
@@ -4297,16 +4297,100 @@ try { window.__VNM_openViewer = openViewer; window.__VNM_app_ready = true; } cat
     console.info(LOG, '保底悬浮按钮已添加');
   }
 
+
+  // --- 入口 3: 扩展设置抽屉（标准 inline-drawer，出现在"扩展程序"面板里）---
+  function ensureSettingsPanel() {
+    var host = document.getElementById('extensions_settings') ||
+               document.getElementById('extensions_settings2');
+    if (!host) return false;
+    if (document.getElementById('vnm-ext-drawer')) return true;
+    var wrap = document.createElement('div');
+    wrap.id = 'vnm-ext-drawer';
+    wrap.innerHTML =
+      '<div class="inline-drawer">' +
+        '<div class="inline-drawer-toggle inline-drawer-header">' +
+          '<b><span class="fa-solid fa-book-open" style="margin-right:6px"></span>Visual Novel</b>' +
+          '<div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>' +
+        '</div>' +
+        '<div class="inline-drawer-content">' +
+          '<small style="opacity:.75">把最近一条 AI 消息渲染成视觉小说。无需 &lt;content&gt; 标签也可用。</small>' +
+          '<div style="margin:8px 0;display:flex;align-items:center;gap:8px">' +
+            '<label style="white-space:nowrap">显示模式</label>' +
+            '<select id="vnm-ext-mode" class="text_pole" style="flex:1">' +
+              '<option value="fullscreen">全屏</option>' +
+              '<option value="web">网页全屏</option>' +
+              '<option value="pc">PC 浮窗</option>' +
+              '<option value="mobile">手机浮窗</option>' +
+            '</select>' +
+          '</div>' +
+          '<div class="menu_button menu_button_icon interactable" id="vnm-ext-open" style="width:100%;justify-content:center">' +
+            '<span class="fa-solid fa-play"></span><span>打开阅读器</span>' +
+          '</div>' +
+          '<label class="checkbox_label" style="margin-top:8px">' +
+            '<input type="checkbox" id="vnm-ext-fab-toggle"><span>显示右下角悬浮按钮</span>' +
+          '</label>' +
+        '</div>' +
+      '</div>';
+    host.appendChild(wrap);
+
+    // 抽屉展开/收起（兜底，万一酒馆没自动绑定）
+    var toggle = wrap.querySelector('.inline-drawer-toggle');
+    var content = wrap.querySelector('.inline-drawer-content');
+    var icon = wrap.querySelector('.inline-drawer-icon');
+    content.style.display = 'none';
+    toggle.addEventListener('click', function () {
+      var open = content.style.display === 'none';
+      content.style.display = open ? '' : 'none';
+      if (icon) { icon.classList.toggle('down', !open); icon.classList.toggle('up', open); }
+    });
+
+    // 模式选择记忆
+    var sel = wrap.querySelector('#vnm-ext-mode');
+    try { var sv = localStorage.getItem('vnm-display-mode'); if (sv) sel.value = sv; } catch (e) {}
+    sel.addEventListener('change', function () {
+      try { localStorage.setItem('vnm-display-mode', sel.value); } catch (e) {}
+    });
+
+    // 打开按钮
+    wrap.querySelector('#vnm-ext-open').addEventListener('click', function () {
+      try { localStorage.setItem('vnm-display-mode', sel.value); } catch (e) {}
+      openVN();
+    });
+
+    // 悬浮按钮开关
+    var fabChk = wrap.querySelector('#vnm-ext-fab-toggle');
+    var fabPref = true;
+    try { fabPref = localStorage.getItem('vnm-ext-fab') !== '0'; } catch (e) {}
+    fabChk.checked = fabPref;
+    applyFabPref(fabPref);
+    fabChk.addEventListener('change', function () {
+      try { localStorage.setItem('vnm-ext-fab', fabChk.checked ? '1' : '0'); } catch (e) {}
+      applyFabPref(fabChk.checked);
+    });
+
+    console.info(LOG, '扩展设置抽屉已注入');
+    return true;
+  }
+
+  function applyFabPref(show) {
+    if (show) { ensureFab(); }
+    else { var f = document.getElementById(FAB_ID); if (f) f.remove(); }
+  }
+
   function boot() {
     var tries = 0;
     var t = setInterval(function () {
       tries++;
       ensureMenuEntry();
+      ensureSettingsPanel();
       if (tries > 60) clearInterval(t);
     }, 500);
     ensureMenuEntry();
-    ensureFab();
-    window.VNM_Extension = { open: openVN, ensureMenuEntry: ensureMenuEntry, ensureFab: ensureFab };
+    ensureSettingsPanel();
+    var fabPref = true;
+    try { fabPref = localStorage.getItem('vnm-ext-fab') !== '0'; } catch (e) {}
+    if (fabPref) ensureFab();
+    window.VNM_Extension = { open: openVN, ensureMenuEntry: ensureMenuEntry, ensureSettingsPanel: ensureSettingsPanel, ensureFab: ensureFab };
     console.info(LOG, '就绪。控制台可用 VNM_Extension.open() 手动打开。');
   }
 
