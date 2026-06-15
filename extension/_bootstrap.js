@@ -135,39 +135,72 @@
     try { var d = JSON.parse(localStorage.getItem('vnm-statusbar-v2') || '{}'); d.visible = true; localStorage.setItem('vnm-statusbar-v2', JSON.stringify(d)); } catch (e) {}
   }
   function openFunctionSystem() {
-    var sb = document.getElementById('vnm-statusbar');
-    if (sb) { showSb(sb); var ov0 = document.getElementById('vnm-overlay'); if (ov0) ov0.style.display = 'none'; return; }
-    // 状态栏由阅读器渲染创建: 先打开最新阅读器, 状态栏出现后把故事层隐藏, 只留功能系统
+    var sb0 = document.getElementById('vnm-statusbar');
+    if (sb0) { showSb(sb0); hideStory(); return; }
     injectAll();
     var mes = latestVnMes();
     if (!mes) { toast('先让 AI 回一条带 <content> 的消息'); return; }
-    clickFull(mes.querySelector('iframe.' + HOST_CLASS), 0);
+    // 用 web 模式打开(不调用 requestFullscreen, 不会把酒馆弄成浏览器全屏)
+    clickMode(mes.querySelector('iframe.' + HOST_CLASS), 'vnm-btn-web', 0);
     var n = 0, t = setInterval(function () {
       var s2 = document.getElementById('vnm-statusbar');
-      if (s2) { showSb(s2); var ov = document.getElementById('vnm-overlay'); if (ov) ov.style.display = 'none'; clearInterval(t); }
+      if (s2) { showSb(s2); hideStory(); clearInterval(t); }
       else if (++n > 30) { clearInterval(t); toast('功能系统尚未就绪，请稍候再点'); }
     }, 150);
   }
+  function hideStory() {
+    // 隐藏阅读器故事层 overlay, 只留功能系统状态栏; 并恢复被 web 模式锁住的滚动
+    var ov = document.getElementById('vnm-overlay'); if (ov) ov.style.display = 'none';
+    try { document.body.style.overflow = ''; document.documentElement.style.overflow = ''; } catch (e) {}
+  }
+  function clickMode(ifr, btnId, n) {
+    if (!ifr) return;
+    try { var doc = ifr.contentDocument; var b = doc && doc.getElementById(btnId); if (b) { b.click(); return; } } catch (e) {}
+    if ((n || 0) < 20) setTimeout(function () { clickMode(ifr, btnId, (n || 0) + 1); }, 150);
+  }
 
   /* ---------- 样式 ---------- */
+  function ensureLiquidFilter() {
+    if (document.getElementById('vnm-fab-liquid-svg')) return;
+    // 径向遮罩: 中心清晰区(95%)不扭曲, 边缘扭曲 —— 与你功能系统同款参数
+    var mask = '<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52">' +
+      '<defs><radialGradient id="g" cx="50%" cy="50%" r="72%">' +
+      '<stop offset="0%" stop-color="black"/><stop offset="95%" stop-color="black"/>' +
+      '<stop offset="100%" stop-color="white"/></radialGradient></defs>' +
+      '<rect width="52" height="52" fill="url(#g)"/></svg>';
+    var wrap = document.createElement('div');
+    wrap.id = 'vnm-fab-liquid-svg';
+    wrap.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
+    wrap.innerHTML =
+      '<svg width="0" height="0"><filter id="vnm-fab-liquid" x="-20%" y="-20%" width="140%" height="140%" primitiveUnits="userSpaceOnUse">' +
+        '<feTurbulence type="fractalNoise" baseFrequency="0.012 0.012" numOctaves="2" seed="7" result="noise"/>' +
+        '<feGaussianBlur in="noise" stdDeviation="2" result="soft"/>' +
+        '<feImage x="0" y="0" width="52" height="52" result="mask" href="data:image/svg+xml,' + encodeURIComponent(mask) + '"/>' +
+        '<feComposite in="soft" in2="mask" operator="arithmetic" k1="1" k2="0" k3="0" k4="0" result="noiseMasked"/>' +
+        '<feFlood flood-color="rgb(128,128,128)" result="gray"/>' +
+        '<feComposite in="gray" in2="mask" operator="arithmetic" k1="-1" k2="1" k3="0" k4="0" result="grayMasked"/>' +
+        '<feComposite in="noiseMasked" in2="grayMasked" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="dispMap"/>' +
+        '<feDisplacementMap in="SourceGraphic" in2="dispMap" scale="60" xChannelSelector="R" yChannelSelector="G"/>' +
+        '<feGaussianBlur stdDeviation="1.5"/>' +
+      '</filter></svg>';
+    document.body.appendChild(wrap);
+  }
   function ensureStyle() {
+    ensureLiquidFilter();
     if (document.getElementById(STYLE_ID)) return;
     var st = document.createElement('style'); st.id = STYLE_ID;
     st.textContent =
       '#vnm-ext-dock{position:fixed;right:16px;bottom:108px;z-index:99999;display:flex;flex-direction:column;gap:12px;}' +
-      '.vnm-fab{position:relative;width:52px;height:52px;padding:0;border-radius:50%;cursor:pointer;overflow:hidden;' +
-        'color:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.22);' +
-        'background:linear-gradient(140deg,rgba(255,255,255,.16),rgba(255,255,255,.03));' +
-        'backdrop-filter:blur(22px) saturate(185%) brightness(1.05);-webkit-backdrop-filter:blur(22px) saturate(185%) brightness(1.05);' +
-        'box-shadow:0 8px 30px rgba(0,0,0,.40),inset 0 1px 1px rgba(255,255,255,.6),inset 0 -7px 13px rgba(0,0,0,.24),inset 0 0 0 .5px rgba(255,255,255,.10);' +
-        'display:flex;align-items:center;justify-content:center;transition:transform .14s ease,box-shadow .22s ease;}' +
-      '.vnm-fab::before{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;' +
-        'background:radial-gradient(125% 85% at 30% 16%,rgba(255,255,255,.55),rgba(255,255,255,0) 56%);}' +
-      '.vnm-fab::after{content:"";position:absolute;left:16%;right:28%;top:9%;height:30%;border-radius:50%;pointer-events:none;' +
-        'background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0));filter:blur(2px);}' +
-      '.vnm-fab:hover{transform:translateY(-1px) scale(1.05);box-shadow:0 12px 36px rgba(0,0,0,.46),inset 0 1px 1px rgba(255,255,255,.7),inset 0 -7px 13px rgba(0,0,0,.24);}' +
-      '.vnm-fab:active{transform:scale(.93);}' +
-      '.vnm-fab svg{position:relative;z-index:1;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));}' +
+      '.vnm-fab{position:relative;width:52px;height:52px;padding:0;border-radius:50%;cursor:pointer;isolation:isolate;' +
+        'color:rgba(255,255,255,.94);border:none;background:rgba(255,255,255,.04);' +
+        'backdrop-filter:blur(1.5px) saturate(160%) url(#vnm-fab-liquid);-webkit-backdrop-filter:blur(6px) saturate(160%);' +
+        'box-shadow:0 10px 30px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.18),inset 2px 3px 6px rgba(255,255,255,.35),inset -2px -3px 8px rgba(0,0,0,.25);' +
+        'display:flex;align-items:center;justify-content:center;transition:transform .15s ease,box-shadow .15s ease;}' +
+      '.vnm-fab::before{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;mix-blend-mode:screen;' +
+        'background:radial-gradient(120% 80% at 20% 0%,rgba(255,255,255,.35),transparent 45%),radial-gradient(120% 80% at 85% 100%,rgba(255,255,255,.18),transparent 45%);}' +
+      '.vnm-fab:hover{transform:scale(1.04);box-shadow:0 14px 38px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.25),inset 2px 3px 8px rgba(255,255,255,.45),inset -2px -3px 10px rgba(0,0,0,.3);}' +
+      '.vnm-fab:active{transform:scale(.96);}' +
+      '.vnm-fab svg{position:relative;z-index:1;pointer-events:none;}' +
       'body.vnm-hidebody-on #chat .mes.vnm-has-vn .vnm-orig-body{display:none!important;}';
     (document.head || document.documentElement).appendChild(st);
   }
