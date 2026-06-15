@@ -1,6 +1,6 @@
-# Visual Novel (liquid glass)
+# Visual Novel by白桃
 
-由酒馆正则 `vn_visual_novel_liquidglass.json`（脚本名 **Visual Novel v9.25-by白桃**）重构而来的**酒馆助手脚本工程**，采用"导入一次、之后从 GitHub 自动更新"的形态。
+由酒馆正则 `vn_visual_novel-by白桃.json`（脚本名 **Visual Novel v9.25-by白桃**）重构而来的**酒馆助手脚本工程**，采用"导入一次、之后从 GitHub 自动更新"的形态。
 
 ## 它是什么
 
@@ -25,13 +25,13 @@
 │   │   └── verify.js                       校验拼回结果与原版字节一致
 │   ├── fixtures/original.json              原始正则（本地校验用，git 忽略）
 │   ├── dist/                               构建产物
-│   │   ├── vn_visual_novel_liquidglass.json  组装好的正则（loader 拉取目标）
+│   │   ├── vn_visual_novel-by白桃.json  组装好的正则（loader 拉取目标）
 │   │   └── manifest.json
 │   └── package.json
 ├── loader/
 │   ├── vn-loader.js                        自动更新 loader 源码
 │   ├── vn-loader.json                      固定名导入件
-│   └── 酒馆助手脚本-Visual Novel liquidglass（自动更新）.json
+│   └── 酒馆助手脚本-Visual Novel by白桃（自动更新）.json
 └── README.md
 ```
 
@@ -68,11 +68,11 @@ https://github.com/LAWLEITLIGHT/VisualNoval
 
 ### 形态 A — 酒馆助手脚本（自动更新）
 
-在酒馆助手「脚本」里导入 `loader/酒馆助手脚本-Visual Novel liquidglass（自动更新）.json`，启用后会自动拉取并安装最新正则。
+在酒馆助手「脚本」里导入 `loader/酒馆助手脚本-Visual Novel by白桃（自动更新）.json`，启用后会自动拉取并安装最新正则。
 
 ### 形态 B — 手动正则
 
-直接把 `app/dist/vn_visual_novel_liquidglass.json` 作为普通正则导入 SillyTavern（无自动更新）。
+直接把 `app/dist/vn_visual_novel-by白桃.json` 作为普通正则导入 SillyTavern（无自动更新）。
 
 ## 修改流程
 
@@ -82,7 +82,7 @@ https://github.com/LAWLEITLIGHT/VisualNoval
 
 ## 来源
 
-- 原始正则：`vn_visual_novel_liquidglass.json`（Visual Novel v9.25-by白桃）
+- 原始正则：`vn_visual_novel-by白桃.json`（Visual Novel v9.25-by白桃）
 - 自动更新架构参考：[xiagaogaozi/Visual-Novel](https://github.com/xiagaogaozi/Visual-Novel) 的 loader 形态
 - 酒馆助手接口：[JS-Slash-Runner](https://github.com/n0vi028/JS-Slash-Runner) `@types`
 

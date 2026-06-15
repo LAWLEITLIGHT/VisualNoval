@@ -41,7 +41,7 @@ if (fs.existsSync(APPS_DIR)) {
   }).filter(function (a) { return a && a.vnmPlugin && a.id && a.name; });
 }
 const header =
-  '/* Visual Novel (liquid glass) — SillyTavern 扩展(iframe 注入式) v' + pkg.version + '\n' +
+  '/* Visual Novel by白桃 — SillyTavern 扩展(iframe 注入式) v' + pkg.version + '\n' +
   ' * 自动生成: app/scripts/build-extension.js (勿手改; 源在 app/src/* 与 extension/_bootstrap.js)\n' +
   ' */\n';
 
@@ -54,7 +54,7 @@ fs.writeFileSync(path.join(EXT, 'index.js'), indexJs);
 fs.writeFileSync(path.join(EXT, 'style.css'), fs.readFileSync(path.join(SRC, 'launcher.css'), 'utf8'));
 
 const manifest = {
-  display_name: 'Visual Novel (liquid glass)',
+  display_name: 'Visual Novel by白桃',
   loading_order: 100,
   requires: [], optional: [],
   js: 'extension/index.js',

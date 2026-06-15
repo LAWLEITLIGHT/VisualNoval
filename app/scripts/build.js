@@ -31,12 +31,12 @@ function buildRegexJson() {
 function main() {
   fs.mkdirSync(DIST, { recursive: true });
   const regexJson = buildRegexJson();
-  const outPath = path.join(DIST, 'vn_visual_novel_liquidglass.json');
+  const outPath = path.join(DIST, 'vn_visual_novel-by白桃.json');
   fs.writeFileSync(outPath, JSON.stringify(regexJson));
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
   const manifest = {
     name: regexJson.scriptName, version: pkg.version,
-    regexFile: 'app/dist/vn_visual_novel_liquidglass.json',
+    regexFile: 'app/dist/vn_visual_novel-by白桃.json',
     builtAt: new Date().toISOString(),
   };
   fs.writeFileSync(path.join(DIST, 'manifest.json'), JSON.stringify(manifest, null, 2));

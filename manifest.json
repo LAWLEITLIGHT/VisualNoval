@@ -1,12 +1,12 @@
 {
-  "display_name": "Visual Novel (liquid glass)",
+  "display_name": "Visual Novel by白桃",
   "loading_order": 100,
   "requires": [],
   "optional": [],
   "js": "extension/index.js",
   "css": "extension/style.css",
   "author": "LAWLEITLIGHT",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "homePage": "https://github.com/LAWLEITLIGHT/VisualNoval",
   "auto_update": true
 }

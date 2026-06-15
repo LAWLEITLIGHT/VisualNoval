@@ -1,9 +1,9 @@
 /**
- * Visual Novel (liquid glass) — 酒馆助手自动更新 loader
+ * Visual Novel by白桃 — 酒馆助手自动更新 loader
  *
  * 这是一个"导入一次、之后自动更新"的酒馆助手脚本。
  * 它在启动时从 GitHub(经 jsDelivr CDN) 拉取最新的正则定义
- *   app/dist/vn_visual_novel_liquidglass.json
+ *   app/dist/vn_visual_novel-by白桃.json
  * 把它映射成酒馆正则(TavernRegex)，并用 replaceTavernRegexes 装到全局正则。
  *
  * 这样：作者更新 GitHub 上的源码并 build 后，用户端下次启动会自动拿到新版，
@@ -15,10 +15,10 @@
   'use strict';
 
   // === 配置（build-loader.js 会注入仓库名）=================================
-  const REPOSITORY = '__REPOSITORY__';          // e.g. "owner/visual-novel-liquidglass"
+  const REPOSITORY = '__REPOSITORY__';          // e.g. "owner/vn_visual_novel-by-baitao"
   const DEFAULT_REF = 'main';
-  const REGEX_PATH = 'app/dist/vn_visual_novel_liquidglass.json';
-  const REGEX_ID_FALLBACK = 'vn-liquidglass-managed';
+  const REGEX_PATH = 'app/dist/vn_visual_novel-by白桃.json';
+  const REGEX_ID_FALLBACK = 'vn-by-baitao-managed';
   const LOG = '[VN-LG Loader]';
   // =========================================================================
 
@@ -78,7 +78,7 @@
     const placement = Array.isArray(s.placement) ? s.placement : [];
     return {
       id: s.id || REGEX_ID_FALLBACK,
-      script_name: s.scriptName || 'Visual Novel (liquid glass)',
+      script_name: s.scriptName || 'Visual Novel by白桃',
       enabled: !s.disabled,
       find_regex: s.findRegex || '',
       replace_string: s.replaceString || '',
