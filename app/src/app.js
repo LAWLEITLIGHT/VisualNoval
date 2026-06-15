@@ -1000,7 +1000,7 @@ function openViewer(mode){
       _set('--ge-filter',g('refract',1)?'url(#vnm-lg-el)':'none');
       /* 通用 */
       _set('--g-bright',(g('bright',90)/100));
-      _set('--g-hl',(g('hl',20)/100));
+      _set('--g-hl',(g('hl',10)/100));
       _set('--g-rad',g('radius',32)+'px');
       _set('--g-bg','rgba(8,8,14,'+(g('dim',23)/100)+')');
       /* 更新两组液态玻璃滤镜：折射强度 + 中心清晰区 */
@@ -2366,7 +2366,7 @@ function openViewer(mode){
         _grp('按钮与组件','el');
         body.appendChild(_div('v8sec','通用'));
         var cardC=_div('v8card');
-        _sl(cardC,'边缘高光','hl',0,100,5,20,'%');
+        _sl(cardC,'边缘高光','hl',0,100,5,10,'%');
         _sl(cardC,'圆角','radius',8,32,1,32,'px');
         _sl(cardC,'提亮','bright',90,140,1,90,'%');
         _sl(cardC,'背景遮罩深度','dim',0,80,1,23,'%');

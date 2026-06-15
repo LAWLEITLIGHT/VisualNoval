@@ -11,14 +11,16 @@
   var STYLE_ID = 'vnm-ext-style';
   var ENTRY_ID = 'vnm-ext-entry';
   var HIDE_KEY = 'vnm-ext-hidebody';
-  var FAB_KEY = 'vnm-ext-fab';
+  var FABVN_KEY = 'vnm-ext-fab-vn';
+  var FABSYS_KEY = 'vnm-ext-fab-sys';
   console.info(LOG, 'bootstrap loaded');
 
   function getCtx() { try { return (window.SillyTavern && SillyTavern.getContext) ? SillyTavern.getContext() : null; } catch (e) { return null; } }
   function pref(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
   function setPref(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function hideBodyOn() { return pref(HIDE_KEY, '1') !== '0'; }
-  function showFab() { return pref(FAB_KEY, '1') !== '0'; }
+  function showFabVN() { return pref(FABVN_KEY, '1') !== '0'; }
+  function showFabSys() { return pref(FABSYS_KEY, '1') !== '0'; }
   function toast(m) { try { if (window.toastr) { window.toastr.info(m, 'Visual Novel'); return; } } catch (e) {} console.info(LOG, m); }
 
   /* ---------- 默认预装功能 app ---------- */
@@ -128,16 +130,23 @@
     }
     return false;
   }
-  function openFunctionSystem(n) {
-    ensureRuntime();
+  function showSb(sb) {
+    sb.style.display = 'flex';
+    try { var d = JSON.parse(localStorage.getItem('vnm-statusbar-v2') || '{}'); d.visible = true; localStorage.setItem('vnm-statusbar-v2', JSON.stringify(d)); } catch (e) {}
+  }
+  function openFunctionSystem() {
     var sb = document.getElementById('vnm-statusbar');
-    if (sb) {
-      sb.style.display = 'flex';
-      try { var d = JSON.parse(localStorage.getItem('vnm-statusbar-v2') || '{}'); d.visible = true; localStorage.setItem('vnm-statusbar-v2', JSON.stringify(d)); } catch (e) {}
-      return;
-    }
-    if ((n || 0) < 24) setTimeout(function () { openFunctionSystem((n || 0) + 1); }, 200);
-    else toast('功能系统尚未就绪，请稍候再点');
+    if (sb) { showSb(sb); var ov0 = document.getElementById('vnm-overlay'); if (ov0) ov0.style.display = 'none'; return; }
+    // 状态栏由阅读器渲染创建: 先打开最新阅读器, 状态栏出现后把故事层隐藏, 只留功能系统
+    injectAll();
+    var mes = latestVnMes();
+    if (!mes) { toast('先让 AI 回一条带 <content> 的消息'); return; }
+    clickFull(mes.querySelector('iframe.' + HOST_CLASS), 0);
+    var n = 0, t = setInterval(function () {
+      var s2 = document.getElementById('vnm-statusbar');
+      if (s2) { showSb(s2); var ov = document.getElementById('vnm-overlay'); if (ov) ov.style.display = 'none'; clearInterval(t); }
+      else if (++n > 30) { clearInterval(t); toast('功能系统尚未就绪，请稍候再点'); }
+    }, 150);
   }
 
   /* ---------- 样式 ---------- */
@@ -145,30 +154,36 @@
     if (document.getElementById(STYLE_ID)) return;
     var st = document.createElement('style'); st.id = STYLE_ID;
     st.textContent =
-      '#vnm-ext-dock{position:fixed;right:16px;bottom:108px;z-index:99999;display:flex;flex-direction:column;gap:11px;}' +
-      '.vnm-fab{width:50px;height:50px;padding:0;border-radius:50%;border:.5px solid rgba(255,255,255,.28);cursor:pointer;' +
-        'background:rgba(255,255,255,.06);backdrop-filter:blur(26px) saturate(175%) brightness(1.06);' +
-        '-webkit-backdrop-filter:blur(26px) saturate(175%) brightness(1.06);' +
-        'box-shadow:0 6px 26px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.38),inset 0 -2px 5px rgba(0,0,0,.16);' +
-        'display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.86);' +
-        'transition:transform .14s ease,box-shadow .2s ease,background .2s ease;}' +
-      '.vnm-fab:hover{transform:scale(1.06);background:rgba(255,255,255,.11);color:rgba(255,255,255,.98);box-shadow:0 9px 32px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 5px rgba(0,0,0,.16);}' +
+      '#vnm-ext-dock{position:fixed;right:16px;bottom:108px;z-index:99999;display:flex;flex-direction:column;gap:12px;}' +
+      '.vnm-fab{position:relative;width:52px;height:52px;padding:0;border-radius:50%;cursor:pointer;overflow:hidden;' +
+        'color:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.22);' +
+        'background:linear-gradient(140deg,rgba(255,255,255,.16),rgba(255,255,255,.03));' +
+        'backdrop-filter:blur(22px) saturate(185%) brightness(1.05);-webkit-backdrop-filter:blur(22px) saturate(185%) brightness(1.05);' +
+        'box-shadow:0 8px 30px rgba(0,0,0,.40),inset 0 1px 1px rgba(255,255,255,.6),inset 0 -7px 13px rgba(0,0,0,.24),inset 0 0 0 .5px rgba(255,255,255,.10);' +
+        'display:flex;align-items:center;justify-content:center;transition:transform .14s ease,box-shadow .22s ease;}' +
+      '.vnm-fab::before{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;' +
+        'background:radial-gradient(125% 85% at 30% 16%,rgba(255,255,255,.55),rgba(255,255,255,0) 56%);}' +
+      '.vnm-fab::after{content:"";position:absolute;left:16%;right:28%;top:9%;height:30%;border-radius:50%;pointer-events:none;' +
+        'background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0));filter:blur(2px);}' +
+      '.vnm-fab:hover{transform:translateY(-1px) scale(1.05);box-shadow:0 12px 36px rgba(0,0,0,.46),inset 0 1px 1px rgba(255,255,255,.7),inset 0 -7px 13px rgba(0,0,0,.24);}' +
       '.vnm-fab:active{transform:scale(.93);}' +
-      '.vnm-fab svg{pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3));}' +
+      '.vnm-fab svg{position:relative;z-index:1;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));}' +
       'body.vnm-hidebody-on #chat .mes.vnm-has-vn .vnm-orig-body{display:none!important;}';
     (document.head || document.documentElement).appendChild(st);
   }
+
   function applyHideBody() { document.body.classList.toggle('vnm-hidebody-on', hideBodyOn()); }
 
   /* 单色玻璃 logo（顺色，无彩色） */
+  // Visual Novel logo: 对话框 + 爱心(乙游/galgame 感, 单色顺色)
   var ICON_VN =
-    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
-      '<path d="M12 5.5C10.2 4 7.3 3.8 5 4.6v13c2.3-.8 5.2-.6 7 .9 1.8-1.5 4.7-1.7 7-.9v-13c-2.3-.8-5.2-.6-7 .9Z"/><path d="M12 5.5v13"/></svg>';
-  // 功能系统 logo: app 宫格(单色)
+    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H10l-4 3v-3H4A1.5 1.5 0 0 1 2.5 15V7A1.5 1.5 0 0 1 4 5.5Z"/>' +
+      '<path d="M12 13.2c-1.5-1-2.7-1.9-2.7-3.05 0-.9.72-1.45 1.5-1.45.62 0 1.05.34 1.2.62.15-.28.58-.62 1.2-.62.78 0 1.5.55 1.5 1.45 0 1.15-1.2 2.05-2.7 3.05Z" fill="currentColor" stroke="none" opacity=".92"/></svg>';
+  // 功能系统 logo: 小电脑(与状态栏 sb-toggle 同款, 单色)
   var ICON_SYS =
-    '<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
-      '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/>' +
-      '<rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>';
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<rect x="2.5" y="4" width="19" height="13" rx="2"/><line x1="8" y1="20.5" x2="16" y2="20.5"/><line x1="12" y1="17" x2="12" y2="20.5"/></svg>';
 
   /* 可拖动 FAB */
   function makeFab(id, title, svg, onClick) {
@@ -197,14 +212,18 @@
     return b;
   }
   function ensureDock() {
-    if (!showFab()) { var ex = document.getElementById('vnm-ext-dock'); if (ex) ex.remove(); return; }
-    if (document.getElementById('vnm-ext-dock')) return;
+    var vn = showFabVN(), sys = showFabSys();
+    var ex = document.getElementById('vnm-ext-dock');
+    if (!vn && !sys) { if (ex) ex.remove(); return; }
     ensureStyle();
-    var dock = document.createElement('div'); dock.id = 'vnm-ext-dock';
-    try { var p = JSON.parse(localStorage.getItem('vnm-ext-dockpos') || 'null'); if (p && p.left) { dock.style.left = p.left; dock.style.top = p.top; dock.style.right = 'auto'; dock.style.bottom = 'auto'; } } catch (e) {}
-    dock.appendChild(makeFab('vnm-fab-vn', 'Visual Novel — 全屏打开最新一轮(可拖动)', ICON_VN, openLatestFullscreen));
-    dock.appendChild(makeFab('vnm-fab-sys', '功能系统 — 在酒馆界面打开(可拖动)', ICON_SYS, openFunctionSystem));
-    document.body.appendChild(dock);
+    if (!ex) {
+      ex = document.createElement('div'); ex.id = 'vnm-ext-dock';
+      try { var p = JSON.parse(localStorage.getItem('vnm-ext-dockpos') || 'null'); if (p && p.left) { ex.style.left = p.left; ex.style.top = p.top; ex.style.right = 'auto'; ex.style.bottom = 'auto'; } } catch (e) {}
+      document.body.appendChild(ex);
+    }
+    ex.innerHTML = '';
+    if (vn) ex.appendChild(makeFab('vnm-fab-vn', 'Visual Novel — 全屏打开最新一轮(可拖动)', ICON_VN, openLatestFullscreen));
+    if (sys) ex.appendChild(makeFab('vnm-fab-sys', '功能系统 — 在酒馆界面打开(可拖动)', ICON_SYS, openFunctionSystem));
   }
 
   /* ---------- 魔法棒入口 ---------- */
@@ -231,7 +250,8 @@
         '<div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>' +
         '<div class="inline-drawer-content">' +
           '<label class="checkbox_label"><input type="checkbox" id="vnm-cfg-hidebody"><span>隐藏正文（只显示启动器界面）</span></label>' +
-          '<label class="checkbox_label" style="margin-top:6px"><input type="checkbox" id="vnm-cfg-fab"><span>显示悬浮按钮（可拖动）</span></label>' +
+          '<label class="checkbox_label" style="margin-top:6px"><input type="checkbox" id="vnm-cfg-fabvn"><span>显示 Visual Novel 悬浮按钮</span></label>' +
+          '<label class="checkbox_label" style="margin-top:6px"><input type="checkbox" id="vnm-cfg-fabsys"><span>显示 功能系统 悬浮按钮</span></label>' +
           '<div class="menu_button menu_button_icon interactable" id="vnm-cfg-open" style="width:100%;justify-content:center;margin-top:8px"><span class="fa-solid fa-expand"></span><span>全屏打开最新一轮</span></div>' +
           '<div class="menu_button menu_button_icon interactable" id="vnm-cfg-sys" style="width:100%;justify-content:center;margin-top:6px"><span class="fa-solid fa-table-cells-large"></span><span>打开功能系统</span></div>' +
         '</div></div>';
@@ -240,7 +260,8 @@
     ct.style.display = 'none';
     tg.addEventListener('click', function () { var o = ct.style.display === 'none'; ct.style.display = o ? '' : 'none'; if (ic) { ic.classList.toggle('down', !o); ic.classList.toggle('up', o); } });
     var hb = wrap.querySelector('#vnm-cfg-hidebody'); hb.checked = hideBodyOn(); hb.addEventListener('change', function () { setPref(HIDE_KEY, hb.checked ? '1' : '0'); applyHideBody(); });
-    var fb = wrap.querySelector('#vnm-cfg-fab'); fb.checked = showFab(); fb.addEventListener('change', function () { setPref(FAB_KEY, fb.checked ? '1' : '0'); ensureDock(); });
+    var fv = wrap.querySelector('#vnm-cfg-fabvn'); fv.checked = showFabVN(); fv.addEventListener('change', function () { setPref(FABVN_KEY, fv.checked ? '1' : '0'); ensureDock(); });
+    var fs2 = wrap.querySelector('#vnm-cfg-fabsys'); fs2.checked = showFabSys(); fs2.addEventListener('change', function () { setPref(FABSYS_KEY, fs2.checked ? '1' : '0'); ensureDock(); });
     wrap.querySelector('#vnm-cfg-open').addEventListener('click', openLatestFullscreen);
     wrap.querySelector('#vnm-cfg-sys').addEventListener('click', openFunctionSystem);
     return true;
