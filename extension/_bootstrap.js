@@ -1,5 +1,5 @@
 /* ============================================================================
- * Visual Novel by白桃 — SillyTavern 扩展引导
+ * Visual Novel — SillyTavern 扩展引导
  * 复刻原始正则：给每条含 <content> 的消息(含 /hide 楼层)注入启动器 iframe，
  * 沿用主程序的翻轮/内容拉取/信息注入/四模式存储；额外提供可拖动的液态玻璃悬浮
  * 按钮(全屏打开 / 打开功能系统)与"隐藏正文"开关。
@@ -10,6 +10,7 @@
   var HOST_CLASS = 'vnm-ext-host';
   var STYLE_ID = 'vnm-ext-style';
   var ENTRY_ID = 'vnm-ext-entry';
+  var ENABLED_KEY = 'vnm-ext-enabled';
   var HIDE_KEY = 'vnm-ext-hidebody';
   var FABVN_KEY = 'vnm-ext-fab-vn';
   var FABSYS_KEY = 'vnm-ext-fab-sys';
@@ -19,6 +20,7 @@
   function pref(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
   function setPref(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function hideBodyOn() { return pref(HIDE_KEY, '1') !== '0'; }
+  function enabledVN() { return pref(ENABLED_KEY, '1') !== '0'; }
   function showFabVN() { return pref(FABVN_KEY, '1') !== '0'; }
   function showFabSys() { return pref(FABSYS_KEY, '1') !== '0'; }
   function toast(m) { try { if (window.toastr) { window.toastr.info(m, 'Visual Novel'); return; } } catch (e) {} console.info(LOG, m); }
@@ -96,7 +98,7 @@
     mes.classList.add('vnm-has-vn');
     return true;
   }
-  function injectAll() { var chat = document.getElementById('chat'); if (!chat) return; var l = chat.querySelectorAll('.mes'); for (var i = 0; i < l.length; i++) ensureLauncherIn(l[i]); }
+  function injectAll() { if (!enabledVN()) return; var chat = document.getElementById('chat'); if (!chat) return; var l = chat.querySelectorAll('.mes'); for (var i = 0; i < l.length; i++) ensureLauncherIn(l[i]); }
 
   /* ---------- 全屏打开最新一轮 ---------- */
   function latestVnMes() {
@@ -121,15 +123,18 @@
   var FS_HOST_ID = 'vnm-fs-host';
 
   // 确保 #vnm-statusbar 始终挂在 tavern body, 这样阅读器开/关/全屏都不会销毁它
-  function keepSbInBody() {
+  function fsAnchor() { return document.fullscreenElement || document.body; }
+  function keepSbAnchored() {
     var sb = document.getElementById('vnm-statusbar');
-    if (sb && sb.parentNode !== document.body) { try { document.body.appendChild(sb); } catch (e) {} }
+    if (!sb) return;
+    var target = fsAnchor();   // 浏览器全屏时挂进全屏元素, 否则挂 body, 保证全屏下也可见
+    if (sb.parentNode !== target) { try { target.appendChild(sb); } catch (e) {} }
   }
 
   // 创建/获取常驻功能系统运行时(隐藏的 host iframe 以 pc 模式跑出功能系统, 再把面板移到 body 常驻)
   function ensureFsRuntime(cb) {
     var sb = document.getElementById('vnm-statusbar');
-    if (sb) { keepSbInBody(); if (cb) cb(sb); return; }
+    if (sb) { keepSbAnchored(); if (cb) cb(sb); return; }
     var host = document.getElementById(FS_HOST_ID);
     if (!host) {
       host = buildIframe('功能系统。');                 // 需要至少一句正文, 阅读器才会渲染并建出功能系统
@@ -168,7 +173,7 @@
   function openFunctionSystem() {
     ensureFsRuntime(function (sb) {
       if (!sb) { toast('功能系统正在初始化，请稍候再点'); return; }
-      keepSbInBody();
+      keepSbAnchored();
       var vis = sb.style.display !== 'none';
       sb.style.display = vis ? 'none' : 'flex';   // FAB = 显示/隐藏 同一个常驻功能系统
       try { var d = JSON.parse(localStorage.getItem('vnm-statusbar-v2') || '{}'); d.visible = !vis; localStorage.setItem('vnm-statusbar-v2', JSON.stringify(d)); } catch (e) {}
@@ -221,6 +226,25 @@
   }
 
   function applyHideBody() { document.body.classList.toggle('vnm-hidebody-on', hideBodyOn()); }
+  function removeLaunchers() {
+    var l = document.querySelectorAll('iframe.' + HOST_CLASS);
+    for (var i = 0; i < l.length; i++) { try { l[i].remove(); } catch (e) {} }
+    var ms = document.querySelectorAll('.mes.vnm-has-vn');
+    for (var j = 0; j < ms.length; j++) {
+      ms[j].classList.remove('vnm-has-vn');
+      var ob = ms[j].querySelector('.vnm-orig-body');
+      if (ob) { while (ob.firstChild) ob.parentNode.insertBefore(ob.firstChild, ob); ob.remove(); } // 还原正文
+    }
+  }
+  function applyEnabled() {
+    if (enabledVN()) { injectAll(); ensureDock(); }
+    else {
+      removeLaunchers();
+      var dk = document.getElementById('vnm-ext-dock'); if (dk) dk.remove();
+      var sb = document.getElementById('vnm-statusbar'); if (sb) sb.style.display = 'none';
+      var fh = document.getElementById('vnm-fs-host'); if (fh) fh.remove();
+    }
+  }
 
   /* 单色玻璃 logo（顺色，无彩色） */
   // Visual Novel logo: 对话框 + 爱心(乙游/galgame 感, 单色顺色)
@@ -279,6 +303,7 @@
     return b;
   }
   function ensureDock() {
+    if (!enabledVN()) { var ex0 = document.getElementById('vnm-ext-dock'); if (ex0) ex0.remove(); return; }
     var vn = showFabVN(), sys = showFabSys();
     var ex = document.getElementById('vnm-ext-dock');
     if (!vn && !sys) { if (ex) ex.remove(); return; }
@@ -313,19 +338,19 @@
     var wrap = document.createElement('div'); wrap.id = 'vnm-ext-drawer';
     wrap.innerHTML =
       '<div class="inline-drawer"><div class="inline-drawer-toggle inline-drawer-header">' +
-        '<b><span class="fa-solid fa-book-open" style="margin-right:6px"></span>Visual Novel by白桃</b>' +
+        '<b><span class="fa-solid fa-book-open" style="margin-right:6px"></span>Visual Novel</b>' +
         '<div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>' +
         '<div class="inline-drawer-content">' +
-          '<label class="checkbox_label"><input type="checkbox" id="vnm-cfg-hidebody"><span>隐藏正文（只显示启动器界面）</span></label>' +
+          '<label class="checkbox_label"><input type="checkbox" id="vnm-cfg-enabled"><span><b>启用 Visual Novel</b>（总开关）</span></label>' +
+          '<label class="checkbox_label" style="margin-top:6px"><input type="checkbox" id="vnm-cfg-hidebody"><span>隐藏正文（只显示启动器界面）</span></label>' +
           '<label class="checkbox_label" style="margin-top:6px"><input type="checkbox" id="vnm-cfg-fabvn"><span>显示 Visual Novel 悬浮按钮</span></label>' +
           '<label class="checkbox_label" style="margin-top:6px"><input type="checkbox" id="vnm-cfg-fabsys"><span>显示 功能系统 悬浮按钮</span></label>' +
           '<div class="menu_button menu_button_icon interactable" id="vnm-cfg-open" style="width:100%;justify-content:center;margin-top:8px"><span class="fa-solid fa-expand"></span><span>全屏打开最新一轮</span></div>' +
           '<div class="menu_button menu_button_icon interactable" id="vnm-cfg-sys" style="width:100%;justify-content:center;margin-top:6px"><span class="fa-solid fa-table-cells-large"></span><span>打开功能系统</span></div>' +
         '</div></div>';
     host.appendChild(wrap);
-    var tg = wrap.querySelector('.inline-drawer-toggle'), ct = wrap.querySelector('.inline-drawer-content'), ic = wrap.querySelector('.inline-drawer-icon');
-    ct.style.display = 'none';
-    tg.addEventListener('click', function () { var o = ct.style.display === 'none'; ct.style.display = o ? '' : 'none'; if (ic) { ic.classList.toggle('down', !o); ic.classList.toggle('up', o); } });
+    // 抽屉展开/收起交给 SillyTavern 原生 inline-drawer 处理(勿再自行绑定, 否则双重切换关不上)
+    var en = wrap.querySelector('#vnm-cfg-enabled'); en.checked = enabledVN(); en.addEventListener('change', function () { setPref(ENABLED_KEY, en.checked ? '1' : '0'); applyEnabled(); });
     var hb = wrap.querySelector('#vnm-cfg-hidebody'); hb.checked = hideBodyOn(); hb.addEventListener('change', function () { setPref(HIDE_KEY, hb.checked ? '1' : '0'); applyHideBody(); });
     var fv = wrap.querySelector('#vnm-cfg-fabvn'); fv.checked = showFabVN(); fv.addEventListener('change', function () { setPref(FABVN_KEY, fv.checked ? '1' : '0'); ensureDock(); });
     var fs2 = wrap.querySelector('#vnm-cfg-fabsys'); fs2.checked = showFabSys(); fs2.addEventListener('change', function () { setPref(FABSYS_KEY, fs2.checked ? '1' : '0'); ensureDock(); });
@@ -347,9 +372,12 @@
 
   function boot() {
     try { seedApps(); } catch (e) {}
-    ensureStyle(); applyHideBody(); injectAll();
-    var n = 0, t = setInterval(function () { n++; ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); injectAll(); applyHideBody(); keepSbInBody(); if (n > 40) clearInterval(t); }, 500);
-    setInterval(keepSbInBody, 1500);
+    ensureStyle(); applyHideBody();
+    // 全屏切换时把功能系统挂进/挂出全屏元素, 保证全屏下也能看到
+    document.addEventListener('fullscreenchange', function () { setTimeout(keepSbAnchored, 50); });
+    if (enabledVN()) injectAll();
+    var n = 0, t = setInterval(function () { n++; ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); injectAll(); applyHideBody(); keepSbAnchored(); if (n > 40) clearInterval(t); }, 500);
+    setInterval(keepSbAnchored, 1500);
     ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); hookEvents();
     window.VNM_Extension = { open: openLatestFullscreen, openSystem: openFunctionSystem, injectAll: injectAll };
     console.info(LOG, '就绪');
