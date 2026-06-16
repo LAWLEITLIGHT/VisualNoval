@@ -385,8 +385,7 @@
       }
     }, true);
     if (enabledVN()) injectAll();
-    var n = 0, t = setInterval(function () { n++; ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); injectAll(); applyHideBody(); keepSbAnchored(); if (n > 40) clearInterval(t); }, 500);
-    setInterval(keepSbAnchored, 1500);
+    var n = 0, t = setInterval(function () { n++; ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); injectAll(); applyHideBody(); if (n > 40) clearInterval(t); }, 500);
     ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); hookEvents();
     window.VNM_Extension = { open: openLatestFullscreen, openSystem: openFunctionSystem, injectAll: injectAll };
     console.info(LOG, '就绪');
