@@ -170,6 +170,13 @@
     }, 120);
   }
 
+  function resetFunctionSystem() {
+    // 假死时不用刷新整页: 拆掉常驻运行时与面板, 重新创建
+    try { var sb = document.getElementById('vnm-statusbar'); if (sb) sb.remove(); } catch (e) {}
+    try { var h = document.getElementById('vnm-fs-host'); if (h) h.remove(); } catch (e) {}
+    ensureFsRuntime(function (s2) { if (s2) { keepSbAnchored(); s2.style.display = 'flex'; } else toast('功能系统重建中...'); });
+    toast('功能系统已重置');
+  }
   function openFunctionSystem() {
     ensureFsRuntime(function (sb) {
       if (!sb) { toast('功能系统正在初始化，请稍候再点'); return; }
@@ -347,6 +354,7 @@
           '<label class="checkbox_label" style="margin-top:6px"><input type="checkbox" id="vnm-cfg-fabsys"><span>显示 功能系统 悬浮按钮</span></label>' +
           '<div class="menu_button menu_button_icon interactable" id="vnm-cfg-open" style="width:100%;justify-content:center;margin-top:8px"><span class="fa-solid fa-expand"></span><span>全屏打开最新一轮</span></div>' +
           '<div class="menu_button menu_button_icon interactable" id="vnm-cfg-sys" style="width:100%;justify-content:center;margin-top:6px"><span class="fa-solid fa-table-cells-large"></span><span>打开功能系统</span></div>' +
+          '<div class="menu_button menu_button_icon interactable" id="vnm-cfg-reset" style="width:100%;justify-content:center;margin-top:6px" title="功能系统假死/点不动时, 不刷新整页就能恢复"><span class="fa-solid fa-rotate"></span><span>重置功能系统(假死时用)</span></div>' +
         '</div></div>';
     host.appendChild(wrap);
     // 抽屉展开/收起交给 SillyTavern 原生 inline-drawer 处理(勿再自行绑定, 否则双重切换关不上)
@@ -356,6 +364,7 @@
     var fs2 = wrap.querySelector('#vnm-cfg-fabsys'); fs2.checked = showFabSys(); fs2.addEventListener('change', function () { setPref(FABSYS_KEY, fs2.checked ? '1' : '0'); ensureDock(); });
     wrap.querySelector('#vnm-cfg-open').addEventListener('click', openLatestFullscreen);
     wrap.querySelector('#vnm-cfg-sys').addEventListener('click', openFunctionSystem);
+    wrap.querySelector('#vnm-cfg-reset').addEventListener('click', resetFunctionSystem);
     return true;
   }
 
@@ -387,7 +396,7 @@
     if (enabledVN()) injectAll();
     var n = 0, t = setInterval(function () { n++; ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); injectAll(); applyHideBody(); if (n > 40) clearInterval(t); }, 500);
     ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); hookEvents();
-    window.VNM_Extension = { open: openLatestFullscreen, openSystem: openFunctionSystem, injectAll: injectAll };
+    window.VNM_Extension = { open: openLatestFullscreen, openSystem: openFunctionSystem, resetSystem: resetFunctionSystem, injectAll: injectAll };
     console.info(LOG, '就绪');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
