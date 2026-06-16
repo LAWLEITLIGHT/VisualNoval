@@ -457,8 +457,38 @@
     if (chat && window.MutationObserver) new MutationObserver(schedule).observe(chat, { childList: true, subtree: false });
   }
 
+  /* ---------- 注入折叠正则: <VNInject>A</VNInject> -> 液态玻璃折叠按钮 ---------- */
+  function ensureFoldRegex() {
+    try {
+      var c = getCtx(); if (!c) return;
+      var es = c.extensionSettings; if (!es) return;
+      es.regex = es.regex || [];
+      var changed = false;
+      var FOLD_HTML = "<details class=\"vnm-inject-fold\" style=\"margin:5px 0;\"><summary style=\"list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;padding:5px 16px;border-radius:16px;border:.5px solid rgba(255,255,255,.24);background:rgba(255,255,255,.06);backdrop-filter:blur(22px) saturate(175%) brightness(1.05);-webkit-backdrop-filter:blur(22px) saturate(175%) brightness(1.05);box-shadow:0 3px 14px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.30);font-size:12px;font-weight:600;letter-spacing:.6px;color:rgba(255,255,255,.88);\"><span style=\"opacity:.85\">▸</span>Visual Novel<span style=\"opacity:.45;font-weight:400\"> · 注入内容</span></summary><div style=\"margin-top:7px;padding:11px 13px;border-radius:13px;background:rgba(255,255,255,.04);border:.5px solid rgba(255,255,255,.13);white-space:pre-wrap;font-size:12px;line-height:1.6;opacity:.9;\">$1</div></details>";
+      var want = [
+        { id: 'vnm-inject-fold-display', scriptName: 'VN注入折叠(显示)',
+          findRegex: '/<VNInject>([\\s\\S]*?)<\\/VNInject>/g', replaceString: FOLD_HTML,
+          markdownOnly: true, promptOnly: false },
+        { id: 'vnm-inject-fold-prompt', scriptName: 'VN注入剥标签(提示词)',
+          findRegex: '/<VNInject>([\\s\\S]*?)<\\/VNInject>/g', replaceString: '$1',
+          markdownOnly: false, promptOnly: true }
+      ];
+      want.forEach(function (w) {
+        for (var i = 0; i < es.regex.length; i++) {
+          if (es.regex[i] && es.regex[i].id === w.id) { es.regex[i].replaceString = w.replaceString; return; }
+        }
+        es.regex.push({ id: w.id, scriptName: w.scriptName, findRegex: w.findRegex, replaceString: w.replaceString,
+          trimStrings: [], placement: [1], disabled: false, markdownOnly: w.markdownOnly, promptOnly: w.promptOnly,
+          runOnEdit: true, substituteRegex: 0, minDepth: null, maxDepth: null });
+        changed = true;
+      });
+      if (changed && c.saveSettingsDebounced) c.saveSettingsDebounced();
+    } catch (e) { console.warn(LOG, 'ensureFoldRegex 失败', e); }
+  }
+
   function boot() {
     try { seedApps(); } catch (e) {}
+    try { ensureFoldRegex(); } catch (e) {}
     ensureStyle(); applyHideBody();
     // 全屏切换时把功能系统挂进/挂出全屏元素, 保证全屏下也能看到
     document.addEventListener('fullscreenchange', function () { setTimeout(keepSbAnchored, 50); });

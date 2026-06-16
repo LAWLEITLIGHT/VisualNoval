@@ -908,7 +908,7 @@ function openViewer(mode){
       const v = input.value.trim(); if (!v) return;
       input.value='';
       var _inj=_sbInjectFn();
-      var _msg=_inj?'【上一轮对话的世界信息包括：'+_inj+'】'+v:v;
+      var _msg=_inj?'<VNInject>'+_inj+'</VNInject>\n'+v:v;
       if(state.stayMode){
         sendToTavern(_msg); showSentState();
       } else {
