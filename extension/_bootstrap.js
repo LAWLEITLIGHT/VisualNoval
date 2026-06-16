@@ -12,6 +12,8 @@
   var ENTRY_ID = 'vnm-ext-entry';
   var ENABLED_KEY = 'vnm-ext-enabled';
   var HIDE_KEY = 'vnm-ext-hidebody';
+  var TAG_KEY = 'vnm-ext-tag';
+  var HIDETAGS_KEY = 'vnm-ext-hidetags';
   var FABVN_KEY = 'vnm-ext-fab-vn';
   var FABSYS_KEY = 'vnm-ext-fab-sys';
   console.info(LOG, 'bootstrap loaded');
@@ -21,6 +23,24 @@
   function setPref(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function hideBodyOn() { return pref(HIDE_KEY, '1') !== '0'; }
   function enabledVN() { return pref(ENABLED_KEY, '1') !== '0'; }
+  function reEsc(x) { return String(x).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function getTag() {
+    try { var t = JSON.parse(localStorage.getItem(TAG_KEY) || 'null'); if (t && t.start && t.end) return t; } catch (e) {}
+    return { start: '<content>', end: '</content>' };
+  }
+  function getHideTags() {
+    try { var a = JSON.parse(localStorage.getItem(HIDETAGS_KEY) || 'null'); if (Array.isArray(a)) return a; } catch (e) {}
+    return [{ from: '<image>', to: '</image>' }, { from: '<imgthink>', to: '</imgthink>' }];
+  }
+  function applyHideTags(src) {
+    var list = getHideTags();
+    for (var i = 0; i < list.length; i++) {
+      var f = list[i] && list[i].from, t = list[i] && list[i].to;
+      if (!f || !t) continue;
+      try { src = src.replace(new RegExp(reEsc(f) + '[\\s\\S]*?' + reEsc(t), 'gi'), ''); } catch (e) {}
+    }
+    return src;
+  }
   function showFabVN() { return pref(FABVN_KEY, '1') !== '0'; }
   function showFabSys() { return pref(FABSYS_KEY, '1') !== '0'; }
   function toast(m) { try { if (window.toastr) { window.toastr.info(m, 'Visual Novel'); return; } } catch (e) {} console.info(LOG, m); }
@@ -55,7 +75,13 @@
     try { var chat = ctx && ctx.chat, mid = mes && mes.getAttribute('mesid'); if (chat && mid != null && chat[+mid]) return String(chat[+mid].mes || ''); } catch (e) {}
     var el = mes && mes.querySelector('.mes_text'); return el ? (el.textContent || '') : '';
   }
-  function extractSource(t) { var re = /<content[^>]*>([\s\S]*?)<\/content>/gi, p = [], m; while ((m = re.exec(t)) !== null) p.push(m[1]); return p.length ? p.join('\n\n') : ''; }
+  function extractSource(text) {
+    var tg = getTag();
+    var re;
+    try { re = new RegExp(reEsc(tg.start) + '([\\s\\S]*?)' + reEsc(tg.end), 'gi'); } catch (e) { re = /<content[^>]*>([\s\S]*?)<\/content>/gi; }
+    var p = [], m; while ((m = re.exec(text)) !== null) p.push(m[1]);
+    return p.length ? applyHideTags(p.join('\n\n')) : '';
+  }
 
   function autosize(iframe) {
     function fit() {
@@ -76,24 +102,27 @@
     var ifr = document.createElement('iframe');
     ifr.className = HOST_CLASS;
     ifr.setAttribute('scrolling', 'no');
-    ifr.setAttribute('srcdoc', tmpl.replace('%%VNM_SOURCE%%', safe));
+    var html = tmpl.replace('%%VNM_SOURCE%%', safe);
+    var ver = window.__VNM_VERSION__;
+    if (ver) html = html.replace('白桃</b>&nbsp;&nbsp;v9.25', '白桃</b>&nbsp;&nbsp;v' + ver);
+    ifr.setAttribute('srcdoc', html);
     ifr.style.cssText = 'width:100%;border:none;display:block;background:transparent;overflow:hidden;';
     autosize(ifr);
     return ifr;
   }
-  function ensureLauncherIn(mes) {
+  function ensureLauncherIn(mes, force) {
     if (!isCandidate(mes)) return false;
     var mesText = mes.querySelector('.mes_text'); if (!mesText) return false;
     if (mesText.querySelector('iframe.' + HOST_CLASS)) { mes.classList.add('vnm-has-vn'); return true; }
     var raw = mesRawText(mes);
-    if (raw.indexOf('<content') === -1) return false;     // 忠实复刻: 仅含 <content> 的消息
-    // 把原正文包进 .vnm-orig-body (供"隐藏正文"开关用), 启动器内联进气泡
+    var src = extractSource(raw);
+    if (!src) { if (!force) return false; src = applyHideTags(raw) || ' '; }  // 自动注入仅限含正文tag; FAB 强制时抓不到也开
     if (!mesText.querySelector('.vnm-orig-body')) {
       var wrap = document.createElement('div'); wrap.className = 'vnm-orig-body';
       while (mesText.firstChild) wrap.appendChild(mesText.firstChild);
       mesText.appendChild(wrap);
     }
-    var ifr = buildIframe(extractSource(raw) || raw); if (!ifr) return false;
+    var ifr = buildIframe(src); if (!ifr) return false;
     mesText.appendChild(ifr);
     mes.classList.add('vnm-has-vn');
     return true;
@@ -110,7 +139,12 @@
   function openLatestFullscreen() {
     injectAll();
     var mes = latestVnMes();
-    if (!mes) { toast('没有可渲染的消息（先让 AI 回一条带 <content> 的）'); return; }
+    if (!mes) {
+      // 没有正文tag也要能打开: 给最新一条 AI 消息强制建启动器(抓不到内容就空着)
+      var chat = document.getElementById('chat'); var all = chat ? chat.querySelectorAll('.mes') : [];
+      for (var i = all.length - 1; i >= 0; i--) { if (isCandidate(all[i])) { ensureLauncherIn(all[i], true); mes = all[i]; break; } }
+    }
+    if (!mes) { toast('没有可打开的消息'); return; }
     clickFull(mes.querySelector('iframe.' + HOST_CLASS), 0);
   }
   function clickFull(ifr, n) {
@@ -355,6 +389,12 @@
           '<div class="menu_button menu_button_icon interactable" id="vnm-cfg-open" style="width:100%;justify-content:center;margin-top:8px"><span class="fa-solid fa-expand"></span><span>全屏打开最新一轮</span></div>' +
           '<div class="menu_button menu_button_icon interactable" id="vnm-cfg-sys" style="width:100%;justify-content:center;margin-top:6px"><span class="fa-solid fa-table-cells-large"></span><span>打开功能系统</span></div>' +
           '<div class="menu_button menu_button_icon interactable" id="vnm-cfg-reset" style="width:100%;justify-content:center;margin-top:6px" title="功能系统假死/点不动时, 不刷新整页就能恢复"><span class="fa-solid fa-rotate"></span><span>重置功能系统(假死时用)</span></div>' +
+          '<hr style="margin:12px 0;opacity:.3">' +
+          '<div style="font-weight:600;margin-bottom:4px">识别正文用 tag</div>' +
+          '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">正文从 <input id="vnm-tag-start" class="text_pole" style="width:120px" placeholder="<content>"> 到 <input id="vnm-tag-end" class="text_pole" style="width:120px" placeholder="</content>"></div>' +
+          '<div style="font-weight:600;margin:12px 0 4px">不显示（VN 模式里隐藏这些 tag 之间的内容）</div>' +
+          '<div id="vnm-hide-list"></div>' +
+          '<div class="menu_button interactable" id="vnm-hide-add" style="margin-top:6px">+ 添加一条</div>' +
         '</div></div>';
     host.appendChild(wrap);
     // 抽屉展开/收起交给 SillyTavern 原生 inline-drawer 处理(勿再自行绑定, 否则双重切换关不上)
@@ -365,6 +405,44 @@
     wrap.querySelector('#vnm-cfg-open').addEventListener('click', openLatestFullscreen);
     wrap.querySelector('#vnm-cfg-sys').addEventListener('click', openFunctionSystem);
     wrap.querySelector('#vnm-cfg-reset').addEventListener('click', resetFunctionSystem);
+
+    // 识别正文用 tag
+    var tg = getTag();
+    var ts = wrap.querySelector('#vnm-tag-start'), te = wrap.querySelector('#vnm-tag-end');
+    ts.value = tg.start; te.value = tg.end;
+    function saveTag() {
+      var st = ts.value.trim() || '<content>', en2 = te.value.trim() || '</content>';
+      setPref(TAG_KEY, JSON.stringify({ start: st, end: en2 }));
+    }
+    ts.addEventListener('change', saveTag); te.addEventListener('change', saveTag);
+
+    // 不显示 tag 列表
+    var listEl = wrap.querySelector('#vnm-hide-list');
+    function renderHideList() {
+      var arr = getHideTags(); listEl.innerHTML = '';
+      arr.forEach(function (it, idx) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:5px;margin-bottom:5px;flex-wrap:wrap';
+        row.innerHTML = '从 <input class="text_pole vnm-h-from" style="width:110px"> 到 <input class="text_pole vnm-h-to" style="width:110px"> <div class="menu_button interactable vnm-h-del" style="padding:2px 8px">删</div>';
+        row.querySelector('.vnm-h-from').value = it.from || '';
+        row.querySelector('.vnm-h-to').value = it.to || '';
+        function save() {
+          var a = getHideTags();
+          a[idx] = { from: row.querySelector('.vnm-h-from').value, to: row.querySelector('.vnm-h-to').value };
+          setPref(HIDETAGS_KEY, JSON.stringify(a));
+        }
+        row.querySelector('.vnm-h-from').addEventListener('change', save);
+        row.querySelector('.vnm-h-to').addEventListener('change', save);
+        row.querySelector('.vnm-h-del').addEventListener('click', function () {
+          var a = getHideTags(); a.splice(idx, 1); setPref(HIDETAGS_KEY, JSON.stringify(a)); renderHideList();
+        });
+        listEl.appendChild(row);
+      });
+    }
+    renderHideList();
+    wrap.querySelector('#vnm-hide-add').addEventListener('click', function () {
+      var a = getHideTags(); a.push({ from: '', to: '' }); setPref(HIDETAGS_KEY, JSON.stringify(a)); renderHideList();
+    });
     return true;
   }
 

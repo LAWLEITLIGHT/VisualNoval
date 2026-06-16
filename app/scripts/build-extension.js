@@ -47,6 +47,7 @@ const header =
 
 fs.mkdirSync(EXT, { recursive: true });
 const indexJs = header +
+  ';window.__VNM_VERSION__ = ' + JSON.stringify(pkg.version) + ';\n' +
   ';window.__VNM_APP_HTML__ = ' + JSON.stringify(body) + ';\n' +
   ';window.__VNM_APPS__ = ' + JSON.stringify(apps) + ';\n' +
   bootstrap;
