@@ -460,7 +460,7 @@ function openViewer(mode){
   }
   function prevTurn(){
     var list=getVnmMes(); var cur=getMyMesElement(); var idx=list.indexOf(cur);
-    if(idx>0) jumpToTurn(list[idx-1],true);
+    if(idx>0) jumpToTurn(list[idx-1]);
   }
   function nextTurn(){
     var list=getVnmMes(); var cur=getMyMesElement(); var idx=list.indexOf(cur);
