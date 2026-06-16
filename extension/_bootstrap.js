@@ -375,6 +375,15 @@
     ensureStyle(); applyHideBody();
     // 全屏切换时把功能系统挂进/挂出全屏元素, 保证全屏下也能看到
     document.addEventListener('fullscreenchange', function () { setTimeout(keepSbAnchored, 50); });
+    // 兜底: 功能系统右上角"隐藏"叉 -> 强制关闭面板(原处理引用了阅读器 overlay, 常驻化后可能失效)
+    document.addEventListener('click', function (e) {
+      var sb = document.getElementById('vnm-statusbar'); if (!sb) return;
+      var btn = (e.target && e.target.closest) ? e.target.closest('button') : null;
+      if (btn && sb.contains(btn) && (btn.title === '隐藏' || btn.getAttribute('title') === '隐藏')) {
+        sb.style.display = 'none';
+        try { var d = JSON.parse(localStorage.getItem('vnm-statusbar-v2') || '{}'); d.visible = false; localStorage.setItem('vnm-statusbar-v2', JSON.stringify(d)); } catch (err) {}
+      }
+    }, true);
     if (enabledVN()) injectAll();
     var n = 0, t = setInterval(function () { n++; ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); injectAll(); applyHideBody(); keepSbAnchored(); if (n > 40) clearInterval(t); }, 500);
     setInterval(keepSbAnchored, 1500);
