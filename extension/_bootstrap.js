@@ -117,44 +117,62 @@
     if ((n || 0) < 20) setTimeout(function () { clickFull(ifr, (n || 0) + 1); }, 150); else toast('阅读器尚未就绪');
   }
 
-  /* ---------- 功能系统(状态栏): 在主页面显示 ---------- */
-  function ensureRuntime() {
-    // 确保页面上至少有一个 VN iframe 在跑, 这样 setupStatusBar 会建好 #vnm-statusbar
-    if (document.getElementById('vnm-statusbar')) return true;
-    injectAll();
-    if (latestVnMes()) return true;
-    // 没有可注入的消息 -> 建一个隐藏的运行时 iframe
-    if (!document.getElementById('vnm-runtime-host')) {
-      var ifr = buildIframe(' ');
-      if (ifr) { ifr.id = 'vnm-runtime-host'; ifr.style.cssText += ';position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;'; document.body.appendChild(ifr); }
-    }
-    return false;
-  }
-  function openFunctionSystem() {
+  /* ---------- 功能系统: 常驻单例运行时(独立于 VN 阅读器, 永不随开关重建) ---------- */
+  var FS_HOST_ID = 'vnm-fs-host';
+
+  // 确保 #vnm-statusbar 始终挂在 tavern body, 这样阅读器开/关/全屏都不会销毁它
+  function keepSbInBody() {
     var sb = document.getElementById('vnm-statusbar');
-    if (sb) { detachStatusBar(sb); return; }
-    injectAll();
-    var mes = latestVnMes();
-    if (!mes) { toast('先让 AI 回一条带 <content> 的消息'); return; }
-    clickMode(mes.querySelector('iframe.' + HOST_CLASS), 'vnm-btn-web', 0);
+    if (sb && sb.parentNode !== document.body) { try { document.body.appendChild(sb); } catch (e) {} }
+  }
+
+  // 创建/获取常驻功能系统运行时(隐藏的 host iframe 以 pc 模式跑出功能系统, 再把面板移到 body 常驻)
+  function ensureFsRuntime(cb) {
+    var sb = document.getElementById('vnm-statusbar');
+    if (sb) { keepSbInBody(); if (cb) cb(sb); return; }
+    var host = document.getElementById(FS_HOST_ID);
+    if (!host) {
+      host = buildIframe('功能系统。');                 // 需要至少一句正文, 阅读器才会渲染并建出功能系统
+      if (!host) { if (cb) cb(null); return; }
+      host.id = FS_HOST_ID;
+      host.removeAttribute('scrolling');
+      // 离屏常驻, 不可见、不挡操作; 但保持存活, 功能系统(电话等)逻辑就一直在这里跑
+      host.style.cssText = 'position:fixed;left:-100000px;top:0;width:440px;height:760px;border:none;opacity:0;pointer-events:none;z-index:-1;';
+      host.addEventListener('load', function () { bootFs(host, cb); });
+      document.body.appendChild(host);
+    } else { bootFs(host, cb); }
+  }
+  function bootFs(host, cb) {
+    var opened = false;
+    function tryOpen() {
+      try {
+        var doc = host.contentDocument;
+        var btn = doc && doc.getElementById('vnm-btn-pc');   // pc 模式: 阅读器渲染在 host 内部(离屏), 不污染主页面
+        if (btn && !opened) { opened = true; btn.click(); }
+      } catch (e) {}
+    }
     var n = 0, t = setInterval(function () {
-      var s2 = document.getElementById('vnm-statusbar');
-      if (s2) { detachStatusBar(s2); clearInterval(t); }
-      else if (++n > 40) { clearInterval(t); toast('功能系统尚未就绪，请稍候再点'); }
-    }, 150);
+      tryOpen();
+      // 功能系统可能先建在 host 文档里, 找到后移到主 body 常驻
+      var sb = document.getElementById('vnm-statusbar');
+      if (!sb) { try { var hd = host.contentDocument; sb = hd && hd.getElementById('vnm-statusbar'); } catch (e) {} }
+      if (sb) {
+        try { document.body.appendChild(sb); } catch (e) {}
+        sb.style.display = 'none';                 // 默认隐藏, 由 FAB/阅读器内按钮切换显示
+        clearInterval(t);
+        if (cb) cb(sb);
+      } else if (++n > 60) { clearInterval(t); if (cb) cb(null); }
+    }, 120);
   }
-  function detachStatusBar(sb) {
-    // 状态栏原本挂在阅读器 overlay 里; 移到 tavern body, 关掉故事层 -> 独立浮在酒馆界面
-    try { if (sb.parentNode !== document.body) document.body.appendChild(sb); } catch (e) {}
-    sb.style.display = 'flex';
-    try { var d = JSON.parse(localStorage.getItem('vnm-statusbar-v2') || '{}'); d.visible = true; localStorage.setItem('vnm-statusbar-v2', JSON.stringify(d)); } catch (e) {}
-    var ov = document.getElementById('vnm-overlay'); if (ov) ov.style.display = 'none';
-    try { document.body.style.overflow = ''; document.documentElement.style.overflow = ''; } catch (e) {}
-  }
-  function clickMode(ifr, btnId, n) {
-    if (!ifr) return;
-    try { var doc = ifr.contentDocument; var b = doc && doc.getElementById(btnId); if (b) { b.click(); return; } } catch (e) {}
-    if ((n || 0) < 20) setTimeout(function () { clickMode(ifr, btnId, (n || 0) + 1); }, 150);
+
+  function openFunctionSystem() {
+    ensureFsRuntime(function (sb) {
+      if (!sb) { toast('功能系统正在初始化，请稍候再点'); return; }
+      keepSbInBody();
+      var vis = sb.style.display !== 'none';
+      sb.style.display = vis ? 'none' : 'flex';   // FAB = 显示/隐藏 同一个常驻功能系统
+      try { var d = JSON.parse(localStorage.getItem('vnm-statusbar-v2') || '{}'); d.visible = !vis; localStorage.setItem('vnm-statusbar-v2', JSON.stringify(d)); } catch (e) {}
+    });
   }
 
   /* ---------- 样式 ---------- */
@@ -330,7 +348,8 @@
   function boot() {
     try { seedApps(); } catch (e) {}
     ensureStyle(); applyHideBody(); injectAll();
-    var n = 0, t = setInterval(function () { n++; ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); injectAll(); applyHideBody(); if (n > 40) clearInterval(t); }, 500);
+    var n = 0, t = setInterval(function () { n++; ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); injectAll(); applyHideBody(); keepSbInBody(); if (n > 40) clearInterval(t); }, 500);
+    setInterval(keepSbInBody, 1500);
     ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); hookEvents();
     window.VNM_Extension = { open: openLatestFullscreen, openSystem: openFunctionSystem, injectAll: injectAll };
     console.info(LOG, '就绪');
