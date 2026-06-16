@@ -6,7 +6,7 @@
   "js": "extension/index.js",
   "css": "extension/style.css",
   "author": "LAWLEITLIGHT",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "homePage": "https://github.com/LAWLEITLIGHT/VisualNoval",
   "auto_update": true
 }
