@@ -947,6 +947,21 @@ function openViewer(mode){
   // ═══════════════════════════════════════════════════════
   // Bridge: set by setupStatusBar, called by Enter handler
   var _sbInjectFn=function(){return'';};
+  // 统一注入: 角色注入 + 各启用app的injectCode注入(按顺序), 二者合并不互相覆盖
+  function _buildInject(){
+    var parts=[];
+    try{
+      var ids=(_sbS&&_sbS.injectCharIds)||[];
+      ids.forEach(function(id){ var hist=_sbS.history&&_sbS.history[id]; if(hist&&hist.length&&hist[0].raw) parts.push(hist[0].raw); });
+    }catch(e){}
+    try{
+      ((_sbS&&_sbS.vnmApps)||[]).filter(function(a){return a.enabled&&a.injectEnabled&&a.injectCode;}).forEach(function(app){
+        try{ var ctx=_makePluginCtx(app); var fn=new TOP.Function('ctx','return('+app.injectCode+')(ctx);'); var r=fn(ctx); if(r)parts.push(String(r)); }catch(e){}
+      });
+    }catch(e){}
+    return parts.join('\n');
+  }
+  try{ TOP.__vnmInjectFn=_buildInject; }catch(e){}
   (function setupStatusBar(){
     try {
 
@@ -1510,19 +1525,8 @@ function openViewer(mode){
 
     /* ─── Plugin injection aggregator ──────────────────── */
     function _updatePluginInjection(){
-      var apps=(_sbS.vnmApps||[]).filter(function(a){return a.enabled&&a.injectEnabled&&a.injectCode;});
-      if(!apps.length){_sbInjectFn=function(){return'';};return;}
-      _sbInjectFn=function(){
-        var parts=[];
-        apps.forEach(function(app){
-          try{
-            var ctx=_makePluginCtx(app);
-            var fn=new TOP.Function('ctx','return('+app.injectCode+')(ctx);');
-            var r=fn(ctx);if(r)parts.push(String(r));
-          }catch(e){}
-        });
-        return parts.join('\n');
-      };
+      _sbInjectFn=_buildInject;
+      try{ TOP.__vnmInjectFn=_buildInject; }catch(e){}
     }
 
     /* ─── Plugin context factory ─────────────────────────── */
@@ -3708,16 +3712,9 @@ function openViewer(mode){
       });
     }
 
-    // Set bridge function so Enter handler can read inject text
-    _sbInjectFn=function(){
-      var ids=_sbS.injectCharIds||[];
-      if(!ids.length)return'';
-      var parts=ids.map(function(id){
-        var hist=_sbS.history[id];
-        return(hist&&hist.length&&hist[0].raw)?hist[0].raw:'';
-      }).filter(Boolean);
-      return parts.join('');
-    };
+    // Set bridge function so Enter handler can read inject text (统一: 角色+app)
+    _sbInjectFn=_buildInject;
+    try{ TOP.__vnmInjectFn=_buildInject; }catch(e){}
 
     // ── History nav bar ───────────────────────────────────
     var _histBar=TOPDOC.createElement('div');

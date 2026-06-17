@@ -55,7 +55,16 @@
     var ch = false;
     apps.forEach(function (p) {
       if (!p || !p.id || !p.name) return;
-      if (sbS.vnmApps.some(function (a) { return a && a.id === p.id; })) return;
+      var ex = null; for (var k = 0; k < sbS.vnmApps.length; k++) { if (sbS.vnmApps[k] && sbS.vnmApps[k].id === p.id) { ex = sbS.vnmApps[k]; break; } }
+      if (ex) {
+        if (String(ex.version || '') !== String(p.version || '')) {  // 版本变化: 更新代码/声明, 保留 settingsValues 与 enabled
+          ex.version = p.version || ex.version; ex.name = p.name; ex.description = p.description || '';
+          ex.icon = p.icon || ex.icon; ex.settingsTitle = p.settingsTitle || p.name;
+          ex.settingsFields = p.settingsFields || []; ex.pageCode = p.pageCode || '';
+          ex.injectCode = p.injectCode || ''; ex.injectEnabled = !!p.injectEnabled; ch = true;
+        }
+        return;
+      }
       sbS.vnmApps.push({ id: p.id, name: p.name, version: p.version || '1.0', description: p.description || '',
         icon: p.icon || '<circle cx="12" cy="12" r="5"/>', enabled: true, settingsTitle: p.settingsTitle || p.name,
         settingsFields: p.settingsFields || [], settingsValues: {}, pageCode: p.pageCode || '',
@@ -457,6 +466,30 @@
     if (chat && window.MutationObserver) new MutationObserver(schedule).observe(chat, { childList: true, subtree: false });
   }
 
+  /* ---------- 普通酒馆输入框发送时也注入(配合 __vnmInjectFn) ---------- */
+  function getInjectText() {
+    try { var f = window.__vnmInjectFn; return (typeof f === 'function') ? String(f() || '') : ''; } catch (e) { return ''; }
+  }
+  function prependInjectToTextarea() {
+    var ta = document.getElementById('send_textarea'); if (!ta) return;
+    var v = ta.value; if (!v || !v.trim()) return;
+    if (v.indexOf('<VNInject>') !== -1) return;
+    var a = getInjectText(); if (!a) return;
+    ta.value = '<VNInject>' + a + '</VNInject>\n' + v;
+  }
+  function hookTavernSend() {
+    document.addEventListener('keydown', function (e) {
+      if (!enabledVN()) return;
+      var t = e.target;
+      if (t && t.id === 'send_textarea' && e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) prependInjectToTextarea();
+    }, true);
+    document.addEventListener('click', function (e) {
+      if (!enabledVN()) return;
+      var b = (e.target && e.target.closest) ? e.target.closest('#send_but, .send_but') : null;
+      if (b) prependInjectToTextarea();
+    }, true);
+  }
+
   /* ---------- 注入折叠正则: <VNInject>A</VNInject> -> 液态玻璃折叠按钮 ---------- */
   function ensureFoldRegex() {
     try {
@@ -503,7 +536,8 @@
     }, true);
     if (enabledVN()) injectAll();
     var n = 0, t = setInterval(function () { n++; ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); injectAll(); applyHideBody(); if (n > 40) clearInterval(t); }, 500);
-    ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); hookEvents();
+    ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); hookEvents(); hookTavernSend();
+    setTimeout(function(){ try{ ensureFsRuntime(function(){}); }catch(e){} }, 3000);
     window.VNM_Extension = { open: openLatestFullscreen, openSystem: openFunctionSystem, resetSystem: resetFunctionSystem, injectAll: injectAll };
     console.info(LOG, '就绪');
   }
