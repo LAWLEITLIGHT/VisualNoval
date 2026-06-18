@@ -30,7 +30,7 @@
   }
   function getHideTags() {
     try { var a = JSON.parse(localStorage.getItem(HIDETAGS_KEY) || 'null'); if (Array.isArray(a)) return a; } catch (e) {}
-    return [{ from: '<image>', to: '</image>' }, { from: '<imgthink>', to: '</imgthink>' }];
+    return [];  // 默认不删任何tag: <image>等由主程序自身处理(图位绑定+正文占位), 删了会导致只剩一张图
   }
   function applyHideTags(src) {
     var list = getHideTags();
@@ -57,7 +57,10 @@
       if (!p || !p.id || !p.name) return;
       var ex = null; for (var k = 0; k < sbS.vnmApps.length; k++) { if (sbS.vnmApps[k] && sbS.vnmApps[k].id === p.id) { ex = sbS.vnmApps[k]; break; } }
       if (ex) {
-        if (String(ex.version || '') !== String(p.version || '')) {  // 版本变化: 更新代码/声明, 保留 settingsValues 与 enabled
+        // 强制同步: 每次以打包(github)版本为准更新代码/声明, 但保留用户 settingsValues 与 enabled
+        var sig = JSON.stringify([p.pageCode, p.injectCode, p.injectEnabled, p.settingsFields, p.version, p.icon, p.name]);
+        var cur = JSON.stringify([ex.pageCode, ex.injectCode, ex.injectEnabled, ex.settingsFields, ex.version, ex.icon, ex.name]);
+        if (sig !== cur) {
           ex.version = p.version || ex.version; ex.name = p.name; ex.description = p.description || '';
           ex.icon = p.icon || ex.icon; ex.settingsTitle = p.settingsTitle || p.name;
           ex.settingsFields = p.settingsFields || []; ex.pageCode = p.pageCode || '';
@@ -192,6 +195,10 @@
   }
   function bootFs(host, cb) {
     var opened = false;
+    var prevMode = null; try { prevMode = localStorage.getItem('vnm-display-mode'); } catch (e) {}
+    function restoreMode() {
+      try { if (prevMode === null) localStorage.removeItem('vnm-display-mode'); else localStorage.setItem('vnm-display-mode', prevMode); } catch (e) {}
+    }
     function tryOpen() {
       try {
         var doc = host.contentDocument;
@@ -207,9 +214,10 @@
       if (sb) {
         try { document.body.appendChild(sb); } catch (e) {}
         sb.style.display = 'none';                 // 默认隐藏, 由 FAB/阅读器内按钮切换显示
+        restoreMode();                             // 还原 vnm-display-mode, 避免污染聊天楼层自动展开
         clearInterval(t);
         if (cb) cb(sb);
-      } else if (++n > 60) { clearInterval(t); if (cb) cb(null); }
+      } else if (++n > 60) { clearInterval(t); restoreMode(); if (cb) cb(null); }
     }, 120);
   }
 
