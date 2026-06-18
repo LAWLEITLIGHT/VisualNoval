@@ -16,7 +16,7 @@
   var HIDETAGS_KEY = 'vnm-ext-hidetags';
   var FABVN_KEY = 'vnm-ext-fab-vn';
   var FABSYS_KEY = 'vnm-ext-fab-sys';
-  console.info(LOG, 'bootstrap loaded');
+  console.info(LOG, 'bootstrap loaded · v' + (window.__VNM_VERSION__ || '?'));
 
   function getCtx() { try { return (window.SillyTavern && SillyTavern.getContext) ? SillyTavern.getContext() : null; } catch (e) { return null; } }
   function pref(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
