@@ -89,8 +89,10 @@
   }
   function extractSource(text) {
     var tg = getTag();
+    var startPat = reEsc(tg.start);
+    if (tg.start.charAt(tg.start.length - 1) === '>') startPat = reEsc(tg.start.slice(0, -1)) + '[^>]*>';
     var re;
-    try { re = new RegExp(reEsc(tg.start) + '([\\s\\S]*?)' + reEsc(tg.end), 'gi'); } catch (e) { re = /<content[^>]*>([\s\S]*?)<\/content>/gi; }
+    try { re = new RegExp(startPat + '([\\s\\S]*?)' + reEsc(tg.end), 'gi'); } catch (e) { re = /<content[^>]*>([\s\S]*?)<\/content>/gi; }
     var p = [], m; while ((m = re.exec(text)) !== null) p.push(m[1]);
     return p.length ? applyHideTags(p.join('\n\n')) : '';
   }
@@ -475,7 +477,24 @@
   }
 
   /* ---------- 普通酒馆输入框发送时也注入(配合 __vnmInjectFn) ---------- */
+  function computeInject() {
+    var parts = [];
+    var sbS = {};
+    try { sbS = JSON.parse(localStorage.getItem('vnm-statusbar-v2') || '{}') || {}; } catch (e) {}
+    try { (sbS.injectCharIds || []).forEach(function (id) { var h = sbS.history && sbS.history[id]; if (h && h.length && h[0].raw) parts.push(h[0].raw); }); } catch (e) {}
+    (sbS.vnmApps || []).forEach(function (app) {
+      if (!app || !app.enabled || !app.injectEnabled || !app.injectCode) return;
+      try {
+        var ctx = { sbS: sbS, settings: app.settingsValues || {}, save: function () {}, toast: function () {},
+          fetch: window.fetch ? window.fetch.bind(window) : null, Audio: window.Audio, atob: window.atob };
+        var fn = new Function('ctx', 'return(' + app.injectCode + ')(ctx);');
+        var r = fn(ctx); if (r) parts.push(String(r));
+      } catch (e) { console.warn(LOG, '注入app失败', app.id, e); }
+    });
+    return parts.join('\n');
+  }
   function getInjectText() {
+    try { var t = computeInject(); if (t) return t; } catch (e) {}
     try { var f = window.__vnmInjectFn; return (typeof f === 'function') ? String(f() || '') : ''; } catch (e) { return ''; }
   }
   function prependInjectToTextarea() {
