@@ -493,6 +493,11 @@
     });
     return parts.join('\n');
   }
+  function runSideEffects() {
+    // 跑一遍各 app injectCode 的"副作用"(如天气引擎注入/壁纸watcher), 忽略返回文本
+    // 这样 F5/重开后, 设置里开启的特效引擎会被重新注入并常驻, 每次打开 VN 都生效
+    try { computeInject(); } catch (e) {}
+  }
   function getInjectText() {
     try { var t = computeInject(); if (t) return t; } catch (e) {}
     try { var f = window.__vnmInjectFn; return (typeof f === 'function') ? String(f() || '') : ''; } catch (e) { return ''; }
@@ -564,6 +569,7 @@
     if (enabledVN()) injectAll();
     var n = 0, t = setInterval(function () { n++; ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); injectAll(); applyHideBody(); if (n > 40) clearInterval(t); }, 500);
     ensureMenuEntry(); ensureSettingsPanel(); ensureDock(); hookEvents(); hookTavernSend();
+    setTimeout(runSideEffects, 1500); setInterval(runSideEffects, 4000);
     setTimeout(function(){ try{ ensureFsRuntime(function(){}); }catch(e){} }, 3000);
     window.VNM_Extension = { open: openLatestFullscreen, openSystem: openFunctionSystem, resetSystem: resetFunctionSystem, injectAll: injectAll };
     console.info(LOG, '就绪');
