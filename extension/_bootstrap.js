@@ -493,10 +493,21 @@
     });
     return parts.join('\n');
   }
+  var _wDiagN = 0;
   function runSideEffects() {
-    // 跑一遍各 app injectCode 的"副作用"(如天气引擎注入/壁纸watcher), 忽略返回文本
-    // 这样 F5/重开后, 设置里开启的特效引擎会被重新注入并常驻, 每次打开 VN 都生效
     try { computeInject(); } catch (e) {}
+    // 诊断(前几次打印): 天气引擎是否注入 / store 是否启用 / 特效数 / 当前能否找到 #vnm-bg
+    if (_wDiagN < 3) {
+      _wDiagN++;
+      try {
+        var eng = !!document.getElementById('vnm-weather-engine');
+        var ws = {}; try { ws = JSON.parse(localStorage.getItem('vnm-weather') || '{}') || {}; } catch (e) {}
+        var bg = !!document.getElementById('vnm-bg');
+        var bgIfr = false;
+        try { var ifr = document.querySelectorAll('iframe'); for (var i = 0; i < ifr.length; i++) { try { var d = ifr[i].contentDocument; if (d && d.getElementById('vnm-bg')) { bgIfr = true; break; } } catch (e) {} } } catch (e) {}
+        console.info(LOG, '天气诊断: engine=' + eng + ' storeEnabled=' + (!!ws.enabled) + ' effects=' + ((ws.effects || []).length) + ' bg(主文档)=' + bg + ' bg(iframe)=' + bgIfr + ' __whEngine=' + (!!window.__whEngine));
+      } catch (e) {}
+    }
   }
   function getInjectText() {
     try { var t = computeInject(); if (t) return t; } catch (e) {}
