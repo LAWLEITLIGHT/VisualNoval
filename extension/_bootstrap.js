@@ -488,7 +488,7 @@
         var ctx = { sbS: sbS, settings: app.settingsValues || {}, save: function () {}, toast: function () {},
           fetch: window.fetch ? window.fetch.bind(window) : null, Audio: window.Audio, atob: window.atob };
         var fn = new Function('ctx', 'return(' + app.injectCode + ')(ctx);');
-        var r = fn(ctx); if (r) parts.push(String(r));
+        var r = fn(ctx); console.info(LOG, '注入app', app.id, 'enabled=' + app.enabled, 'injectEnabled=' + app.injectEnabled, 'len=' + (r ? String(r).length : 0)); if (r) parts.push(String(r));
       } catch (e) { console.warn(LOG, '注入app失败', app.id, e); }
     });
     return parts.join('\n');
