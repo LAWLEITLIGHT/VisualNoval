@@ -534,6 +534,28 @@
     }, true);
   }
 
+  /* ---------- 预装天气特效到天气app的特效列表 ---------- */
+  function seedWeatherEffects() {
+    var fx = window.__VNM_WEATHER_FX__ || [];
+    if (!fx.length) return;
+    var KEY = 'vnm-weather', st = {};
+    try { st = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { st = {}; }
+    if (!Array.isArray(st.effects)) st.effects = [];
+    if (typeof st.enabled !== 'boolean') st.enabled = !!st.enabled;
+    if (!st.random) st.random = { on: false, interval: 20, comboMin: 1, comboMax: 2 };
+    var changed = false;
+    fx.forEach(function (p) {
+      if (!p || !p.code) return;
+      var id = 'wfxb_' + (p._builtinId || p.name);
+      if (st.effects.some(function (e) { return e.id === id; })) return;   // 已预装则跳过(幂等)
+      var params = {}; (p.params || []).forEach(function (pd) { params[pd.key] = pd.default; });
+      st.effects.push({ id: id, name: p.name || '特效', description: p.description || '', code: p.code,
+        enabled: false, fixed: false, params: params, paramDefs: p.params || [] });   // 默认已安装但不自动开, 由用户在app里勾选
+      changed = true;
+    });
+    if (changed) { try { localStorage.setItem(KEY, JSON.stringify(st)); console.info(LOG, '已预装天气特效'); } catch (e) {} }
+  }
+
   /* ---------- 注入折叠正则: <VNInject>A</VNInject> -> 液态玻璃折叠按钮 ---------- */
   function ensureFoldRegex() {
     try {
@@ -565,6 +587,7 @@
 
   function boot() {
     try { seedApps(); } catch (e) {}
+    try { seedWeatherEffects(); } catch (e) {}
     try { ensureFoldRegex(); } catch (e) {}
     ensureStyle(); applyHideBody();
     // 全屏切换时把功能系统挂进/挂出全屏元素, 保证全屏下也能看到
