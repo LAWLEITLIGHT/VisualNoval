@@ -33,6 +33,7 @@
     return [];  // 默认不删任何tag: <image>等由主程序自身处理(图位绑定+正文占位), 删了会导致只剩一张图
   }
   function applyHideTags(src) {
+    try { src = src.replace(/\[ImageTag:[^\]]*\]/gi, ''); } catch (e) {}  // 内置: 始终剥掉壁纸[ImageTag:...], VN模式不显示
     var list = getHideTags();
     for (var i = 0; i < list.length; i++) {
       var f = list[i] && list[i].from, t = list[i] && list[i].to;
