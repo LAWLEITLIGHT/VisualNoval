@@ -570,14 +570,17 @@
           markdownOnly: true, promptOnly: false },
         { id: 'vnm-inject-fold-prompt', scriptName: 'VN注入剥标签(提示词)',
           findRegex: '/<VNInject>([\\s\\S]*?)<\\/VNInject>/g', replaceString: '$1',
-          markdownOnly: false, promptOnly: true }
+          markdownOnly: false, promptOnly: true },
+        { id: 'vnm-hide-voicetag', scriptName: '隐藏VoiceTag(聊天显示)',
+          findRegex: '/\\[VoiceTag:[^\\]]*\\]/g', replaceString: '',
+          markdownOnly: true, promptOnly: false, placement: [2] }
       ];
       want.forEach(function (w) {
         for (var i = 0; i < es.regex.length; i++) {
           if (es.regex[i] && es.regex[i].id === w.id) { es.regex[i].replaceString = w.replaceString; return; }
         }
         es.regex.push({ id: w.id, scriptName: w.scriptName, findRegex: w.findRegex, replaceString: w.replaceString,
-          trimStrings: [], placement: [1], disabled: false, markdownOnly: w.markdownOnly, promptOnly: w.promptOnly,
+          trimStrings: [], placement: w.placement || [1], disabled: false, markdownOnly: w.markdownOnly, promptOnly: w.promptOnly,
           runOnEdit: true, substituteRegex: 0, minDepth: null, maxDepth: null });
         changed = true;
       });
