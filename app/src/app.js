@@ -1912,7 +1912,7 @@ function openViewer(mode){
           _u();var _t=TOP.setInterval(function(){if(!TOPDOC.body.contains(ck)){TOP.clearInterval(_t);return;}_u();},1000);
         })();
         /* iOS springboard icon grid */
-        var grid=_div('v8home');
+        var icons=[];
         function _appCard(name,desc,svgD,onclick,extra){
           var c=_div('v8hi'+(extra?' '+extra:''));
           c.appendChild(_div('v8hic',_svg(svgD,26)));
@@ -1920,11 +1920,11 @@ function openViewer(mode){
           if(onclick)c.addEventListener('click',onclick);
           return c;
         }
-        grid.appendChild(_appCard('设置','功能配置 · API · 角色',
+        icons.push(_appCard('设置','功能配置 · API · 角色',
           '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>',
           function(){_go('settings');}));
         /* Built-in: 通讯录 */
-        grid.appendChild(_appCard('通讯录','联系人 · 角色 · 用户',
+        icons.push(_appCard('通讯录','联系人 · 角色 · 用户',
           '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>',
           function(){_go('contacts');}));
         /* Plugin apps */
@@ -1933,7 +1933,7 @@ function openViewer(mode){
           var ic=_div('v8hic');ic.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" style="stroke:rgba(255,255,255,.88);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;position:relative;z-index:2;">'+app.icon+'</svg>';
           c.appendChild(ic);c.appendChild(_div('v8hl',app.name));
           c.addEventListener('click',function(){_go('app-run',{app:app});});
-          grid.appendChild(c);
+          icons.push(c);
         });
         /* 应用商城 card – same style as Settings, triggers file import */
         var fileInput=TOPDOC.createElement('input');fileInput.type='file';fileInput.accept='.json';fileInput.style.display='none';
@@ -1960,11 +1960,36 @@ function openViewer(mode){
             }catch(err){_toast('导入失败: '+err.message);}
           };reader.readAsText(f);
         });
-        grid.appendChild(_appCard('应用商城','导入 · 管理插件 App',
+        icons.push(_appCard('应用商城','导入 · 管理插件 App',
           '<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>',
           function(){fileInput.click();}));
         pg.appendChild(fileInput);
-        pg.appendChild(grid);scr.appendChild(pg);
+        /* iOS 分页: 每页8个, 左右滑切换, 仅 app 网格滑动 */
+        var PER=8;
+        var pageCount=Math.max(1,Math.ceil(icons.length/PER));
+        var viewport=_div('');viewport.style.cssText='flex:1;min-height:0;overflow:hidden;position:relative;touch-action:pan-y;';
+        var track=_div('');track.style.cssText='display:flex;height:100%;transition:transform .32s cubic-bezier(.22,.61,.36,1);will-change:transform;';
+        for(var _pi=0;_pi<pageCount;_pi++){
+          var _page=_div('');_page.style.cssText='flex:0 0 100%;box-sizing:border-box;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:min-content;gap:20px 8px;padding:8px 16px 18px;align-content:start;';
+          for(var _ii=_pi*PER;_ii<Math.min((_pi+1)*PER,icons.length);_ii++)_page.appendChild(icons[_ii]);
+          track.appendChild(_page);
+        }
+        viewport.appendChild(track);
+        var dots=_div('');dots.style.cssText='display:flex;justify-content:center;gap:7px;padding:6px 0 14px;flex-shrink:0;';
+        var _dotEls=[];
+        for(var _di=0;_di<pageCount;_di++){(function(d){var dot=_div('');dot.style.cssText='width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.25);transition:all .2s;cursor:pointer;';dot.addEventListener('click',function(){_goPage(d);});dots.appendChild(dot);_dotEls.push(dot);})(_di);}
+        if(pageCount<=1)dots.style.display='none';
+        var _cur=0;
+        function _updDots(){_dotEls.forEach(function(d,i){d.style.background=i===_cur?'rgba(255,255,255,.92)':'rgba(255,255,255,.25)';d.style.transform=i===_cur?'scale(1.18)':'scale(1)';});}
+        function _goPage(pp){_cur=Math.max(0,Math.min(pageCount-1,pp));track.style.transition='transform .32s cubic-bezier(.22,.61,.36,1)';track.style.transform='translateX('+(-_cur*100)+'%)';_updDots();}
+        _updDots();
+        var _drag=false,_sx=0,_vw=0,_base=0,_moved=false;
+        viewport.addEventListener('pointerdown',function(e){_drag=true;_moved=false;_sx=e.clientX;_vw=viewport.clientWidth||1;_base=-_cur*_vw;track.style.transition='none';try{e.stopPropagation();}catch(_e){}});
+        viewport.addEventListener('pointermove',function(e){if(!_drag)return;try{e.stopPropagation();}catch(_e){}var dx=e.clientX-_sx;if(Math.abs(dx)>6)_moved=true;var x=_base+dx;var mn=-(pageCount-1)*_vw;if(x>0)x=x*0.35;if(x<mn)x=mn+(x-mn)*0.35;track.style.transform='translateX('+x+'px)';});
+        function _endDrag(e){if(!_drag)return;_drag=false;var ex=(e&&e.clientX!=null)?e.clientX:_sx;var dx=ex-_sx;var th=_vw*0.18;if(dx<-th)_goPage(_cur+1);else if(dx>th)_goPage(_cur-1);else _goPage(_cur);}
+        viewport.addEventListener('pointerup',_endDrag);viewport.addEventListener('pointercancel',_endDrag);
+        viewport.addEventListener('click',function(e){if(_moved){e.preventDefault();e.stopPropagation();_moved=false;}},true);
+        pg.appendChild(viewport);pg.appendChild(dots);scr.appendChild(pg);
       }
 
 
