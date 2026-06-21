@@ -160,10 +160,12 @@ function openViewer(mode){
   const raw = getRawSource();
   if (!raw){ alert('VN v6.0: 内嵌源为空'); return; }
   const parsed = parseRawSource(raw);
-  try{ (parsed.sentences||[]).forEach(function(_s){
+  try{ var _vtPend=null; (parsed.sentences||[]).forEach(function(_s){
     var _m=/\[VoiceTag:([^:\]]*):([^:\]]*):([^\]]*)\]/.exec(_s.text||'');
     if(_m){ _s.voice={name:(_m[1]||'').trim(),lang:(_m[2]||'').trim(),text:(_m[3]||'').trim()};
       _s.text=(_s.text||'').replace(/\[VoiceTag:[^\]]*\]/g,'').replace(/^\s+/,''); }
+    if(_vtPend && !_s.voice){ _s.voice=_vtPend; _vtPend=null; }
+    if(_s.voice && (!_s.text||!_s.text.trim())){ _vtPend=_s.voice; _s.voice=null; }  // 标签自成一句(空)->把语音移到下一句
   }); }catch(e){}
   const myImgs = findMyImages();
   console.log('[VNM v8.0] sentences:', parsed.sentences.length, 'imageCount:', parsed.imageCount, 'imgs:', myImgs.length);
@@ -1007,7 +1009,7 @@ function openViewer(mode){
         var _vtChars=((_sbS.characters)||[]).filter(function(c){return c.ttsEnabled;}).map(function(c){return c.name;}).filter(Boolean);
         if(_vtChars.length){
           var _vtLang=_sbS.voiceTagLang||'中文';
-          parts.push('【语音系统】当前开启语音的角色有：'+_vtChars.join('、')+'。当这些角色在剧情中说出口的台词时，请紧贴在该角色台词前面输出 [VoiceTag:角色名:'+_vtLang+':要朗读的文本] ，其中“要朗读的文本”必须用'+_vtLang+'书写（仅此处用'+_vtLang+'，不影响台词双引号内本身的语言）。例如：[VoiceTag:白桃:'+_vtLang+':今天天气真不错呀]“今天天气真不错呀”。未在此列表中的角色不要输出 VoiceTag。');
+          parts.push('【语音系统·VoiceTag】当前开启语音的角色：'+_vtChars.join('、')+'。当这些角色在剧情里说出口的台词时，紧贴在该角色台词最前面、与台词同一行（不可换行分隔）输出：[VoiceTag:角色名:'+_vtLang+':朗读文本]。规则：①朗读文本必须用'+_vtLang+'书写；②若'+_vtLang+'与台词双引号内语言相同，则朗读文本与台词内容完全一致；③若不同，则朗读文本是按'+_vtLang+'对该句台词的翻译；④'+_vtLang+'只决定朗读文本的语言，不改变台词双引号内本身的语言；⑤未在名单内的角色不要输出VoiceTag。例：[VoiceTag:白桃:'+_vtLang+':今天天气真不错呀]“今天天气真不错呀” 或 [VoiceTag:白桃:英语:Hello]“你好”。');
         }
       }
     }catch(e){}
