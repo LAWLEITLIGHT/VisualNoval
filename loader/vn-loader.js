@@ -3,7 +3,7 @@
  *
  * 这是一个"导入一次、之后自动更新"的酒馆助手脚本。
  * 它在启动时从 GitHub(经 jsDelivr CDN) 拉取最新的正则定义
- *   app/dist/vn_visual_novel_liquidglass.json
+ *   app/dist/vn_visual_novel-by白桃.json
  * 把它映射成酒馆正则(TavernRegex)，并用 replaceTavernRegexes 装到全局正则。
  *
  * 这样：作者更新 GitHub 上的源码并 build 后，用户端下次启动会自动拿到新版，
@@ -17,8 +17,8 @@
   // === 配置（build-loader.js 会注入仓库名）=================================
   const REPOSITORY = '__REPOSITORY__';          // e.g. "owner/visual-novel-liquidglass"
   const DEFAULT_REF = 'main';
-  const REGEX_PATH = 'app/dist/vn_visual_novel_liquidglass.json';
-  const REGEX_ID_FALLBACK = 'vn-liquidglass-managed';
+  const REGEX_PATH = 'app/dist/vn_visual_novel-by白桃.json';
+  const REGEX_ID_FALLBACK = 'vn-baitao-managed';
   const LOG = '[VN-LG Loader]';
   // =========================================================================
 
@@ -62,7 +62,8 @@
 
   async function fetchLatestCommit(fetchFn) {
     try {
-      const u = `https://api.github.com/repos/${REPOSITORY}/branches/main?vnlg_t=${Date.now()}`;
+      const branch = cfg.ref || 'main';
+      const u = `https://api.github.com/repos/${REPOSITORY}/branches/${branch}?vnlg_t=${Date.now()}`;
       const r = await fetchFn(u, { cache: 'no-store' });
       if (!r || !r.ok) return '';
       const j = await r.json();
@@ -78,7 +79,7 @@
     const placement = Array.isArray(s.placement) ? s.placement : [];
     return {
       id: s.id || REGEX_ID_FALLBACK,
-      script_name: s.scriptName || 'Visual Novel (liquid glass)',
+      script_name: s.scriptName || 'Visual Novel v9.25-by白桃',
       enabled: !s.disabled,
       find_regex: s.findRegex || '',
       replace_string: s.replaceString || '',

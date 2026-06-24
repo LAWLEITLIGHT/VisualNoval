@@ -1,6 +1,6 @@
 /**
  * verify.js — 校验拼回的 replaceString 与原始正则 JSON 完全一致（round-trip）。
- * 需要把原始 vn_visual_novel_liquidglass.json 放在 app/fixtures/original.json。
+ * 需要把原始 vn_visual_novel-by白桃.json 放在 app/fixtures/original.json。
  */
 const fs = require('fs');
 const path = require('path');

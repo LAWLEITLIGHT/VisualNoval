@@ -1,7 +1,7 @@
 {
   "name": "visual-novel-liquidglass",
   "version": "1.2.0",
-  "description": "Visual Novel (liquid glass) 酒馆助手脚本 — 由 vn_visual_novel_liquidglass.json 正则重构而来",
+  "description": "Visual Novel (liquid glass) 酒馆助手脚本 — 由 vn_visual_novel-by白桃.json 正则重构而来",
   "repository": "LAWLEITLIGHT/VisualNoval",
   "scripts": {
     "build": "node scripts/build.js",
