@@ -17,7 +17,7 @@
       "label": "雨滴大小",
       "min": 50,
       "max": 200,
-      "default": 145,
+      "default": 80,
       "step": 5,
       "unit": "%"
     }

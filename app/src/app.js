@@ -161,6 +161,7 @@ function openViewer(mode){
   if (!raw){ alert('VN v6.0: 内嵌源为空'); return; }
   const parsed = parseRawSource(raw);
   try {
+    var finalSentences = [];
     var _vtPend = null;
     (parsed.sentences || []).forEach(function(_s) {
       var txt = _s.text || '';
@@ -185,10 +186,23 @@ function openViewer(mode){
         }
       }
       if (_vtPend && !_s.voice) { _s.voice = _vtPend; _vtPend = null; }
-      if (_s.voice && (!_s.text || !_s.text.trim())) { _vtPend = _s.voice; _s.voice = null; }
+      if (_s.voice && (!_s.text || !_s.text.trim())) {
+        _vtPend = _s.voice;
+        _s.voice = null;
+      }
+      if (_s.text && _s.text.trim()) {
+        finalSentences.push(_s);
+      }
     });
+    if (_vtPend && finalSentences.length > 0) {
+      var lastValid = finalSentences[finalSentences.length - 1];
+      if (!lastValid.voice) {
+        lastValid.voice = _vtPend;
+      }
+    }
+    parsed.sentences = finalSentences;
   } catch(e) {
-    console.warn('[VNM v8.0] VoiceTag parse error:', e);
+    console.warn('[VNM v9.33] VoiceTag parse error:', e);
   }
 
   const myImgs = findMyImages();
@@ -332,6 +346,11 @@ function openViewer(mode){
     imageCountOverride: 'imageCountOverride' in _saved ? _saved.imageCountOverride : null,
     sentPending: false, watchTimer: null
   };
+  
+  try {
+    TOP.__vnmActiveState = state;
+    TOP.__vnmActiveSbS = _vtGetSbS();
+  } catch(e) {}
   const bg = overlay.querySelector('#vnm-bg');
   const textEl = overlay.querySelector('#vnm-text');
   const progEl = overlay.querySelector('#vnm-progress');
@@ -724,10 +743,26 @@ function openViewer(mode){
 
   function _vtGetSbS() {
     try {
-      return JSON.parse(TOP.localStorage.getItem('vnm-statusbar-v2') || '{}') || {};
-    } catch(e) {
-      return {};
-    }
+      if (typeof _sbS !== 'undefined' && _sbS) return _sbS;
+    } catch(e){}
+    try {
+      if (typeof window !== 'undefined' && window.__vnmLocalSbS) return window.__vnmLocalSbS;
+    } catch(e){}
+    try {
+      if (typeof TOP !== 'undefined' && TOP && TOP.__vnmLocalSbS) return TOP.__vnmLocalSbS;
+    } catch(e){}
+    try {
+      if (typeof window !== 'undefined' && window.parent && window.parent.__vnmLocalSbS) return window.parent.__vnmLocalSbS;
+    } catch(e){}
+    try {
+      var r = localStorage.getItem('vnm-statusbar-v2');
+      if (r) return JSON.parse(r) || {};
+    } catch(e){}
+    try {
+      var r2 = TOP.localStorage.getItem('vnm-statusbar-v2');
+      if (r2) return JSON.parse(r2) || {};
+    } catch(e){}
+    return { voiceTagEnabled: true, voiceTagMode: 'manual', voiceTagLang: '日语', voiceTagCacheN: 12 };
   }
 
   function _vtCharByName(nm){
@@ -771,15 +806,23 @@ function openViewer(mode){
   }
 
   function _vtRequest(nm,lang,text,cb){
-    var ch=_vtCharByName(nm); if(!ch||!ch.ttsEnabled){ cb('角色未开启TTS'); return; }
-    var vid=ch.ttsVoiceId||'female-shaonv', spd=parseFloat(ch.ttsSpeed)||1, key=_vtKey(lang,text,vid);
+    var ch=_vtCharByName(nm);
+    if(ch && !ch.ttsEnabled){ cb('角色未开启TTS'); return; }
+    var vid=(ch && ch.ttsVoiceId)||'female-shaonv', spd=ch ? (parseFloat(ch.ttsSpeed)||1) : 1, key=_vtKey(lang,text,vid);
     if(_vtCache.map[key]){ cb(null,_vtCache.map[key]); return; }
     
     var sbS = _vtGetSbS();
-    var host=(sbS.ttsApiHost||'https://api.minimax.chat').replace(/\/+$/,''), apikey=sbS.ttsApiKey||'', gid=sbS.ttsGroupId||'';
+    var host=sbS.ttsApiHost||'https://api.minimax.chat';
+    while(host.slice(-1)==='/'){ host=host.slice(0,-1); }
+    var apikey=sbS.ttsApiKey||'', gid=sbS.ttsGroupId||'';
     if(!apikey||!gid){ cb('未配置 MiniMax Key/GroupId'); return; }
     
-    var body={model:sbS.ttsModel||'speech-02-hd',text:text,stream:false,voice_setting:{voice_id:vid,speed:spd,vol:1,pitch:0},audio_setting:{sample_rate:32000,bitrate:128000,format:'mp3',channel:1}};
+    var ttsLang = ch ? (ch.ttsLanguage || '') : '';
+    var voiceSetting = {voice_id:vid,speed:spd,vol:1,pitch:0};
+    if(ttsLang){
+      voiceSetting.language = ttsLang;
+    }
+    var body={model:sbS.ttsModel||'speech-02-hd',text:text,stream:false,voice_setting:voiceSetting,audio_setting:{sample_rate:32000,bitrate:128000,format:'mp3',channel:1}};
     TOP.fetch(host+'/v1/t2a_v2?GroupId='+gid,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apikey},body:JSON.stringify(body)})
       .then(function(r){ if(!r.ok)throw new Error('HTTP '+r.status); return r.json(); })
       .then(function(d){
@@ -800,19 +843,19 @@ function openViewer(mode){
 
   function _vtEnsureBtn(){
     if(_vtBtn) return _vtBtn;
-    var cb = _doc.getElementById('vnm-ctrl-bar');
+    if(!overlay) return null;
+    var cb = overlay.querySelector('#vnm-ctrl-bar');
     if(!cb) return null;
     var tb = cb.querySelector('[data-act="toggle-bar"]');
     if(!tb) return null;
     
-    _vtBtn = _doc.createElement('button');
+    _vtBtn = (overlay.ownerDocument || document).createElement('button');
     _vtBtn.id = 'vnm-voice-btn';
     _vtBtn.className = 'vnm-icon-btn';
     _vtBtn.title = '播放台词语音';
     
-    // Matching Lucide SVG icon of a speaker
     _vtBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
-    _vtBtn.style.cssText = 'background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);color:rgba(255,255,255,.88);margin-right:2px;';
+    _vtBtn.style.cssText = 'background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);color:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);';
     
     _vtBtn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -830,7 +873,7 @@ function openViewer(mode){
         _vtBtn.style.opacity = '1';
         _vtBtn.title = '播放台词语音';
         if(err){
-          showToast('语音失败: ' + err, 2200);
+          alert('语音失败: ' + err);
           return;
         }
         _vtPlay(url);
@@ -843,16 +886,26 @@ function openViewer(mode){
 
   function _vtOnRender(s){
     var sbS = _vtGetSbS();
-    if(!sbS.voiceTagEnabled||!s||!s.voice){ if(_vtBtn)_vtBtn.style.display='none'; _vtCur=null; return; }
+    if(!sbS.voiceTagEnabled||!s||!s.voice){
+      if(_vtBtn){ _vtBtn.remove(); _vtBtn=null; }
+      _vtCur=null;
+      return;
+    }
     var ch=_vtCharByName(s.voice.name);
-    if(!ch||!ch.ttsEnabled){ if(_vtBtn)_vtBtn.style.display='none'; _vtCur=null; return; }
+    var ttsEnabled = ch ? ch.ttsEnabled : false;
+    if(!ttsEnabled){
+      if(_vtBtn){ _vtBtn.remove(); _vtBtn=null; }
+      _vtCur=null;
+      return;
+    }
     _vtCur=s.voice;
     
-    var key = _vtKey(s.voice.lang, s.voice.text, ch.ttsVoiceId || 'female-shaonv');
+    var vid = (ch && ch.ttsVoiceId) || 'female-shaonv';
+    var key = _vtKey(s.voice.lang, s.voice.text, vid);
     var isCached = !!_vtCache.map[key];
     
     if((sbS.voiceTagMode||'manual')==='auto'){
-      if(_vtBtn)_vtBtn.style.display='none';
+      if(_vtBtn){ _vtBtn.remove(); _vtBtn=null; }
       if(isCached) {
         _vtPlay(_vtCache.map[key]);
       } else {
@@ -873,25 +926,26 @@ function openViewer(mode){
     if (!sbS.voiceTagEnabled || (sbS.voiceTagMode || 'manual') !== 'auto') return;
     
     var nextIdx = currIdx + 1;
-    if (nextIdx >= state.sentences.length) return; // 没有下一句了
+    if (nextIdx >= state.sentences.length) return;
     
     var nextSentence = state.sentences[nextIdx];
-    if (!nextSentence || !nextSentence.voice) return; // 下一句没有 VoiceTag
+    if (!nextSentence || !nextSentence.voice) return;
     
     var v = nextSentence.voice;
     var ch = _vtCharByName(v.name);
-    if (!ch || !ch.ttsEnabled) return; // 该角色未开启 TTS
+    var ttsEnabled = ch ? ch.ttsEnabled : false;
+    if (!ttsEnabled) return;
     
-    var vid = ch.ttsVoiceId || 'female-shaonv';
+    var vid = (ch && ch.ttsVoiceId) || 'female-shaonv';
     var key = _vtKey(v.lang, v.text, vid);
-    if (_vtCache.map[key]) return; // 已经缓存过，无需重复请求
+    if (_vtCache.map[key]) return;
     
-    console.log('[VNM v8.0] Auto prefetching voice for NEXT sentence (' + nextIdx + '): ' + v.name);
+    console.log('[VNM v9.33] Auto prefetching voice for NEXT sentence (' + nextIdx + '): ' + v.name);
     _vtRequest(v.name, v.lang, v.text, function(err, url) {
       if (err) {
-        console.warn('[VNM v8.0] Prefetch err for ' + v.name + ':', err);
+        console.warn('[VNM v9.33] Prefetch err for ' + v.name + ':', err);
       } else {
-        console.log('[VNM v8.0] Successfully prefetched next voice for ' + v.name);
+        console.log('[VNM v9.33] Successfully prefetched next voice for ' + v.name);
       }
     });
   }
