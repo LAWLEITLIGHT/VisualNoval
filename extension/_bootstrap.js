@@ -50,8 +50,11 @@
  function seedApps() {
    var apps = window.__VNM_APPS__ || [];
    if (!apps.length) return;
-   var KEY = 'vnm-statusbar-v2', sbS = {};
-   try { sbS = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { sbS = {}; }
+   var KEY = 'vnm-statusbar-v2';
+   var raw = localStorage.getItem(KEY);
+   var isNew = !raw;
+   var sbS = {};
+   try { sbS = JSON.parse(raw || '{}') || {}; } catch (e) { sbS = {}; }
    if (!Array.isArray(sbS.vnmApps)) sbS.vnmApps = [];
    var ch = false;
    apps.forEach(function (p) {
@@ -68,6 +71,14 @@
          ex.injectCode = p.injectCode || ''; ex.injectEnabled = !!p.injectEnabled; ch = true;
        }
        return;
+     }
+     // 全新本地存储，或者 vnmApps 列表完全为空（初始状态），才自动安装
+     if (isNew || sbS.vnmApps.length === 0) {
+       sbS.vnmApps.push({ id: p.id, name: p.name, version: p.version || '1.0', description: p.description || '',
+         icon: p.icon || '<circle cx="12" cy="12" r="5"/>', enabled: true, settingsTitle: p.settingsTitle || p.name,
+         settingsFields: p.settingsFields || [], settingsValues: {}, pageCode: p.pageCode || '',
+         injectCode: p.injectCode || '', injectEnabled: !!p.injectEnabled });
+       ch = true;
      }
    });
     if (ch) { try { localStorage.setItem(KEY, JSON.stringify(sbS)); console.info(LOG, '已同步功能 app'); } catch (e) {} }
@@ -542,8 +553,11 @@
  function seedWeatherEffects() {
    var fx = window.__VNM_WEATHER_FX__ || [];
    if (!fx.length) return;
-   var KEY = 'vnm-weather', st = {};
-   try { st = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { st = {}; }
+   var KEY = 'vnm-weather';
+   var raw = localStorage.getItem(KEY);
+   var isNew = !raw;
+   var st = {};
+   try { st = JSON.parse(raw || '{}') || {}; } catch (e) { st = {}; }
    if (!Array.isArray(st.effects)) st.effects = [];
    if (typeof st.enabled !== 'boolean') st.enabled = !!st.enabled;
    if (!st.random) st.random = { on: false, interval: 20, comboMin: 1, comboMax: 2 };
@@ -563,6 +577,13 @@
           changed = true;
         }
         return;
+      }
+      // 全新本地存储，或者 st.effects 数组完全为空，才自动安装
+      if (isNew || st.effects.length === 0) {
+        var params = {}; (p.params || []).forEach(function (pd) { params[pd.key] = pd.default; });
+        st.effects.push({ id: id, name: p.name || '特效', description: p.description || '', code: p.code,
+          enabled: false, fixed: false, params: params, paramDefs: p.params || [] });
+        changed = true;
       }
     });
     if (changed) { try { localStorage.setItem(KEY, JSON.stringify(st)); console.info(LOG, '已同步天气特效'); } catch (e) {} }
