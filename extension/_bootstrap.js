@@ -594,12 +594,12 @@
         changed = true;
       });
       if (changed && c.saveSettingsDebounced) c.saveSettingsDebounced();
-    } catch (e) { console.warn(LOG, 'ensureFoldRegex 失败', e); }
-  }
+   } catch (e) { console.warn(LOG, 'ensureFoldRegex 失败', e); }
+ }
 
-  function boot() {
-    try { seedApps(); } catch (e) {}
-    try { seedWeatherEffects(); } catch (e) {}
+ function boot() {
+    // try { seedApps(); } catch (e) {}
+    // try { seedWeatherEffects(); } catch (e) {}
     try { ensureFoldRegex(); } catch (e) {}
     ensureStyle(); applyHideBody();
     // 全屏切换时把功能系统挂进/挂出全屏元素, 保证全屏下也能看到
