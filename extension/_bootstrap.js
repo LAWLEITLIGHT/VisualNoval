@@ -46,37 +46,32 @@
   function showFabSys() { return pref(FABSYS_KEY, '1') !== '0'; }
   function toast(m) { try { if (window.toastr) { window.toastr.info(m, 'Visual Novel'); return; } } catch (e) {} console.info(LOG, m); }
 
-  /* ---------- 默认预装功能 app ---------- */
-  function seedApps() {
-    var apps = window.__VNM_APPS__ || [];
-    if (!apps.length) return;
-    var KEY = 'vnm-statusbar-v2', sbS = {};
-    try { sbS = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { sbS = {}; }
-    if (!Array.isArray(sbS.vnmApps)) sbS.vnmApps = [];
-    var ch = false;
-    apps.forEach(function (p) {
-      if (!p || !p.id || !p.name) return;
-      var ex = null; for (var k = 0; k < sbS.vnmApps.length; k++) { if (sbS.vnmApps[k] && sbS.vnmApps[k].id === p.id) { ex = sbS.vnmApps[k]; break; } }
-      if (ex) {
-        // 强制同步: 每次以打包(github)版本为准更新代码/声明, 但保留用户 settingsValues 与 enabled
-        var sig = JSON.stringify([p.pageCode, p.injectCode, p.injectEnabled, p.settingsFields, p.version, p.icon, p.name]);
-        var cur = JSON.stringify([ex.pageCode, ex.injectCode, ex.injectEnabled, ex.settingsFields, ex.version, ex.icon, ex.name]);
-        if (sig !== cur) {
-          ex.version = p.version || ex.version; ex.name = p.name; ex.description = p.description || '';
-          ex.icon = p.icon || ex.icon; ex.settingsTitle = p.settingsTitle || p.name;
-          ex.settingsFields = p.settingsFields || []; ex.pageCode = p.pageCode || '';
-          ex.injectCode = p.injectCode || ''; ex.injectEnabled = !!p.injectEnabled; ch = true;
-        }
-        return;
-      }
-      sbS.vnmApps.push({ id: p.id, name: p.name, version: p.version || '1.0', description: p.description || '',
-        icon: p.icon || '<circle cx="12" cy="12" r="5"/>', enabled: true, settingsTitle: p.settingsTitle || p.name,
-        settingsFields: p.settingsFields || [], settingsValues: {}, pageCode: p.pageCode || '',
-        injectCode: p.injectCode || '', injectEnabled: !!p.injectEnabled });
-      ch = true;
-    });
-    if (ch) { try { localStorage.setItem(KEY, JSON.stringify(sbS)); console.info(LOG, '已预装功能 app'); } catch (e) {} }
-  }
+ /* ---------- 默认预装功能 app ---------- */
+ function seedApps() {
+   var apps = window.__VNM_APPS__ || [];
+   if (!apps.length) return;
+   var KEY = 'vnm-statusbar-v2', sbS = {};
+   try { sbS = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { sbS = {}; }
+   if (!Array.isArray(sbS.vnmApps)) sbS.vnmApps = [];
+   var ch = false;
+   apps.forEach(function (p) {
+     if (!p || !p.id || !p.name) return;
+     var ex = null; for (var k = 0; k < sbS.vnmApps.length; k++) { if (sbS.vnmApps[k] && sbS.vnmApps[k].id === p.id) { ex = sbS.vnmApps[k]; break; } }
+     if (ex) {
+       // 强制同步: 每次以打包(github)版本为准更新代码/声明, 但保留用户 settingsValues 与 enabled
+       var sig = JSON.stringify([p.pageCode, p.injectCode, p.injectEnabled, p.settingsFields, p.version, p.icon, p.name]);
+       var cur = JSON.stringify([ex.pageCode, ex.injectCode, ex.injectEnabled, ex.settingsFields, ex.version, ex.icon, ex.name]);
+       if (sig !== cur) {
+         ex.version = p.version || ex.version; ex.name = p.name; ex.description = p.description || '';
+         ex.icon = p.icon || ex.icon; ex.settingsTitle = p.settingsTitle || p.name;
+         ex.settingsFields = p.settingsFields || []; ex.pageCode = p.pageCode || '';
+         ex.injectCode = p.injectCode || ''; ex.injectEnabled = !!p.injectEnabled; ch = true;
+       }
+       return;
+     }
+   });
+    if (ch) { try { localStorage.setItem(KEY, JSON.stringify(sbS)); console.info(LOG, '已同步功能 app'); } catch (e) {} }
+ }
 
   /* ---------- 注入启动器到每条消息(含 /hide 楼层) ---------- */
   function isCandidate(mes) {
@@ -543,27 +538,35 @@
     }, true);
   }
 
-  /* ---------- 预装天气特效到天气app的特效列表 ---------- */
-  function seedWeatherEffects() {
-    var fx = window.__VNM_WEATHER_FX__ || [];
-    if (!fx.length) return;
-    var KEY = 'vnm-weather', st = {};
-    try { st = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { st = {}; }
-    if (!Array.isArray(st.effects)) st.effects = [];
-    if (typeof st.enabled !== 'boolean') st.enabled = !!st.enabled;
-    if (!st.random) st.random = { on: false, interval: 20, comboMin: 1, comboMax: 2 };
-    var changed = false;
-    fx.forEach(function (p) {
-      if (!p || !p.code) return;
-      var id = 'wfxb_' + (p._builtinId || p.name);
-      if (st.effects.some(function (e) { return e.id === id; })) return;   // 已预装则跳过(幂等)
-      var params = {}; (p.params || []).forEach(function (pd) { params[pd.key] = pd.default; });
-      st.effects.push({ id: id, name: p.name || '特效', description: p.description || '', code: p.code,
-        enabled: false, fixed: false, params: params, paramDefs: p.params || [] });   // 默认已安装但不自动开, 由用户在app里勾选
-      changed = true;
+ /* ---------- 预装天气特效到天气app的特效列表 ---------- */
+ function seedWeatherEffects() {
+   var fx = window.__VNM_WEATHER_FX__ || [];
+   if (!fx.length) return;
+   var KEY = 'vnm-weather', st = {};
+   try { st = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { st = {}; }
+   if (!Array.isArray(st.effects)) st.effects = [];
+   if (typeof st.enabled !== 'boolean') st.enabled = !!st.enabled;
+   if (!st.random) st.random = { on: false, interval: 20, comboMin: 1, comboMax: 2 };
+   var changed = false;
+   fx.forEach(function (p) {
+     if (!p || !p.code) return;
+     var id = 'wfxb_' + (p._builtinId || p.name);
+      var ex = null; for (var k = 0; k < st.effects.length; k++) { if (st.effects[k] && st.effects[k].id === id) { ex = st.effects[k]; break; } }
+      if (ex) {
+        var sig = JSON.stringify([p.code, p.description, p.params, p.name]);
+        var cur = JSON.stringify([ex.code, ex.description, ex.paramDefs, ex.name]);
+        if (sig !== cur) {
+          ex.code = p.code;
+          ex.description = p.description || '';
+          ex.name = p.name;
+          ex.paramDefs = p.params || [];
+          changed = true;
+        }
+        return;
+      }
     });
-    if (changed) { try { localStorage.setItem(KEY, JSON.stringify(st)); console.info(LOG, '已预装天气特效'); } catch (e) {} }
-  }
+    if (changed) { try { localStorage.setItem(KEY, JSON.stringify(st)); console.info(LOG, '已同步天气特效'); } catch (e) {} }
+ }
 
   /* ---------- 注入折叠正则: <VNInject>A</VNInject> -> 液态玻璃折叠按钮 ---------- */
   function ensureFoldRegex() {
@@ -598,8 +601,8 @@
  }
 
  function boot() {
-    // try { seedApps(); } catch (e) {}
-    // try { seedWeatherEffects(); } catch (e) {}
+    try { seedApps(); } catch (e) {}
+    try { seedWeatherEffects(); } catch (e) {}
     try { ensureFoldRegex(); } catch (e) {}
     ensureStyle(); applyHideBody();
     // 全屏切换时把功能系统挂进/挂出全屏元素, 保证全屏下也能看到
