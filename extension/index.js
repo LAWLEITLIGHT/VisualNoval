@@ -57,11 +57,8 @@
  function seedApps() {
    var apps = window.__VNM_APPS__ || [];
    if (!apps.length) return;
-   var KEY = 'vnm-statusbar-v2';
-   var raw = localStorage.getItem(KEY);
-   var isNew = !raw;
-   var sbS = {};
-   try { sbS = JSON.parse(raw || '{}') || {}; } catch (e) { sbS = {}; }
+   var KEY = 'vnm-statusbar-v2', sbS = {};
+   try { sbS = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { sbS = {}; }
    if (!Array.isArray(sbS.vnmApps)) sbS.vnmApps = [];
    var ch = false;
    apps.forEach(function (p) {
@@ -79,16 +76,13 @@
        }
        return;
      }
-     // 全新本地存储，或者 vnmApps 列表完全为空（初始状态），才自动安装
-     if (isNew || sbS.vnmApps.length === 0) {
-       sbS.vnmApps.push({ id: p.id, name: p.name, version: p.version || '1.0', description: p.description || '',
-         icon: p.icon || '<circle cx="12" cy="12" r="5"/>', enabled: true, settingsTitle: p.settingsTitle || p.name,
-         settingsFields: p.settingsFields || [], settingsValues: {}, pageCode: p.pageCode || '',
-         injectCode: p.injectCode || '', injectEnabled: !!p.injectEnabled });
-       ch = true;
-     }
+     sbS.vnmApps.push({ id: p.id, name: p.name, version: p.version || '1.0', description: p.description || '',
+       icon: p.icon || '<circle cx="12" cy="12" r="5"/>', enabled: true, settingsTitle: p.settingsTitle || p.name,
+       settingsFields: p.settingsFields || [], settingsValues: {}, pageCode: p.pageCode || '',
+       injectCode: p.injectCode || '', injectEnabled: !!p.injectEnabled });
+     ch = true;
    });
-    if (ch) { try { localStorage.setItem(KEY, JSON.stringify(sbS)); console.info(LOG, '已同步功能 app'); } catch (e) {} }
+   if (ch) { try { localStorage.setItem(KEY, JSON.stringify(sbS)); console.info(LOG, '已同步功能 app'); } catch (e) {} }
  }
 
   /* ---------- 注入启动器到每条消息(含 /hide 楼层) ---------- */
