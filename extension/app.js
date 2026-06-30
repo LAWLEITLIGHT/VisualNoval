@@ -2603,6 +2603,53 @@ function openViewer(mode){
             return row;
           }
 
+          function _makeEntryRow(e,isLast){
+            if(typeof e.enabled!=='boolean') e.enabled=(_sbS.wbActive||[]).indexOf(e.id)>=0;
+            var row=_div('v8row');if(isLast)row.style.borderBottom='none';
+            row.style.cssText+='flex-direction:column;align-items:stretch;gap:8px;padding:12px 14px;';
+
+            var top=TOPDOC.createElement('div');
+            top.style.cssText='display:flex;align-items:center;gap:8px;width:100%;';
+
+            var tog=_tog(!!e.enabled,function(v){
+              e.enabled=v;
+              _sbS.wbActive=_sbS.wbActive||[];
+              if(v){ if(_sbS.wbActive.indexOf(e.id)<0) _sbS.wbActive.push(e.id); }
+              else { _sbS.wbActive=_sbS.wbActive.filter(function(id){return id!==e.id;}); }
+              _W();
+            });
+            tog.style.flexShrink='0';
+
+            var nameEl=TOPDOC.createElement('input');nameEl.className='v8fi';
+            nameEl.style.cssText='flex:1;min-width:0;padding:6px 9px;font-size:13px;background:rgba(255,255,255,.06);border-radius:8px;border:.5px solid rgba(255,255,255,.1);color:rgba(255,255,255,.85);';
+            nameEl.value=e.name||'';
+            nameEl.placeholder='条目名称';
+            nameEl.addEventListener('mousedown',function(ev){ev.stopPropagation();});
+            nameEl.addEventListener('input',function(){e.name=this.value;_W();});
+            nameEl.addEventListener('change',function(){e.name=this.value.trim();this.value=e.name;_W();});
+
+            var del=TOPDOC.createElement('button');del.textContent='删除';
+            del.style.cssText='background:rgba(255,255,255,.16);color:#fff;border:none;border-radius:8px;height:28px;padding:0 10px;font-size:12px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;';
+            del.onclick=function(ev){
+              ev.stopPropagation();
+              _sbS.wbEntries=(_sbS.wbEntries||[]).filter(function(x){return x.id!==e.id;});
+              _sbS.wbActive=(_sbS.wbActive||[]).filter(function(id){return id!==e.id;});
+              _W();_drawWb();
+            };
+            top.appendChild(tog);top.appendChild(nameEl);top.appendChild(del);
+
+            var contentEl=TOPDOC.createElement('textarea');contentEl.className='v8fi';
+            contentEl.value=e.content||'';
+            contentEl.placeholder='条目内容';
+            contentEl.style.cssText='width:100%;box-sizing:border-box;min-height:96px;resize:vertical;padding:8px 9px;font-size:12px;line-height:1.55;background:rgba(255,255,255,.055);border:.5px solid rgba(255,255,255,.12);border-radius:10px;color:rgba(255,255,255,.86);white-space:pre-wrap;';
+            contentEl.addEventListener('mousedown',function(ev){ev.stopPropagation();});
+            contentEl.addEventListener('input',function(){e.content=this.value;_W();});
+            contentEl.addEventListener('change',function(){e.content=this.value;_W();});
+
+            row.appendChild(top);row.appendChild(contentEl);
+            return row;
+          }
+
           /* ST groups */
           stOrder.forEach(function(gname){
             var gEntries=stGroups[gname];
@@ -4182,4 +4229,3 @@ window.addEventListener('storage', function(e){
     if(typeof window._vnmClose === 'function') window._vnmClose();
   }
 });
-
