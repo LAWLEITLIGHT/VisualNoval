@@ -2605,6 +2605,8 @@ function openViewer(mode){
 
           function _makeEntryRow(e,isLast){
             if(typeof e.enabled!=='boolean') e.enabled=(_sbS.wbActive||[]).indexOf(e.id)>=0;
+            if(!_ui.wbEntryOpen) _ui.wbEntryOpen={};
+            var isOpen=!!_ui.wbEntryOpen[e.id];
             var row=_div('v8row');if(isLast)row.style.borderBottom='none';
             row.style.cssText+='flex-direction:column;align-items:stretch;gap:8px;padding:12px 14px;';
 
@@ -2628,6 +2630,14 @@ function openViewer(mode){
             nameEl.addEventListener('input',function(){e.name=this.value;_W();});
             nameEl.addEventListener('change',function(){e.name=this.value.trim();this.value=e.name;_W();});
 
+            var expand=TOPDOC.createElement('button');expand.textContent=isOpen?'收起':'展开';
+            expand.style.cssText='background:rgba(255,255,255,.10);color:#fff;border:none;border-radius:8px;height:28px;padding:0 10px;font-size:12px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;';
+            expand.onclick=function(ev){
+              ev.stopPropagation();
+              _ui.wbEntryOpen[e.id]=!_ui.wbEntryOpen[e.id];
+              _drawWb();
+            };
+
             var del=TOPDOC.createElement('button');del.textContent='删除';
             del.style.cssText='background:rgba(255,255,255,.16);color:#fff;border:none;border-radius:8px;height:28px;padding:0 10px;font-size:12px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;';
             del.onclick=function(ev){
@@ -2636,17 +2646,19 @@ function openViewer(mode){
               _sbS.wbActive=(_sbS.wbActive||[]).filter(function(id){return id!==e.id;});
               _W();_drawWb();
             };
-            top.appendChild(tog);top.appendChild(nameEl);top.appendChild(del);
+            top.appendChild(tog);top.appendChild(nameEl);top.appendChild(expand);top.appendChild(del);
 
-            var contentEl=TOPDOC.createElement('textarea');contentEl.className='v8fi';
-            contentEl.value=e.content||'';
-            contentEl.placeholder='条目内容';
-            contentEl.style.cssText='width:100%;box-sizing:border-box;min-height:96px;resize:vertical;padding:8px 9px;font-size:12px;line-height:1.55;background:rgba(255,255,255,.055);border:.5px solid rgba(255,255,255,.12);border-radius:10px;color:rgba(255,255,255,.86);white-space:pre-wrap;';
-            contentEl.addEventListener('mousedown',function(ev){ev.stopPropagation();});
-            contentEl.addEventListener('input',function(){e.content=this.value;_W();});
-            contentEl.addEventListener('change',function(){e.content=this.value;_W();});
-
-            row.appendChild(top);row.appendChild(contentEl);
+            row.appendChild(top);
+            if(isOpen){
+              var contentEl=TOPDOC.createElement('textarea');contentEl.className='v8fi';
+              contentEl.value=e.content||'';
+              contentEl.placeholder='条目内容';
+              contentEl.style.cssText='width:100%;box-sizing:border-box;min-height:96px;resize:vertical;padding:8px 9px;font-size:12px;line-height:1.55;background:rgba(255,255,255,.055);border:.5px solid rgba(255,255,255,.12);border-radius:10px;color:rgba(255,255,255,.86);white-space:pre-wrap;';
+              contentEl.addEventListener('mousedown',function(ev){ev.stopPropagation();});
+              contentEl.addEventListener('input',function(){e.content=this.value;_W();});
+              contentEl.addEventListener('change',function(){e.content=this.value;_W();});
+              row.appendChild(contentEl);
+            }
             return row;
           }
 
